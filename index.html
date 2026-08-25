@@ -217,6 +217,152 @@
     line-height: 1.55;
   }
 
+  /* Admin Mode (Decision 10) */
+
+  .admin-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 18px 0 8px;
+  }
+
+  .password-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .password-modal {
+    background: var(--surface, #1C2230);
+    border: 1px solid #C97D60;
+    border-radius: 8px;
+    padding: 24px 26px;
+    width: 320px;
+    max-width: 90vw;
+  }
+  .pw-modal-error {
+    font-size: 12px;
+    color: #C97D60;
+    margin: -6px 0 10px;
+  }
+
+  .admin-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 1px solid #8A93A6;
+    color: #8A93A6;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .admin-toggle-btn:hover { border-color: #C97D60; color: #C97D60; }
+  .admin-toggle-btn.on {
+    background: #C97D60;
+    border-color: #C97D60;
+    color: var(--bg);
+  }
+
+  .admin-status {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: #C97D60;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .editable-field {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    transition: background 0.12s;
+  }
+  body.admin-mode .editable-field:hover {
+    background: rgba(201, 162, 39, 0.12);
+    outline: 1px dashed var(--gold);
+  }
+  body.admin-mode .editable-field::after {
+    content: " ✎";
+    color: var(--gold);
+    font-size: 11px;
+    opacity: 0.7;
+  }
+
+  .attr-field {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .attr-update-trigger {
+    display: none;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #C97D60;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  body.admin-mode .attr-update-trigger { display: inline; }
+  .attr-update-trigger:hover { text-decoration: underline; }
+
+  .edit-textarea, .edit-input {
+    width: 100%;
+    max-width: 480px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-primary);
+    background: var(--surface-alt, #191E29);
+    border: 1px solid var(--gold);
+    border-radius: 5px;
+    padding: 8px 10px;
+    resize: vertical;
+  }
+
+  .edit-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .edit-save-btn, .edit-cancel-btn {
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 6px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid var(--gold);
+  }
+  .edit-save-btn { background: var(--gold); color: var(--bg); }
+  .edit-cancel-btn { background: none; color: var(--text-muted); border-color: var(--border); }
+
+  .admin-update-form {
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: rgba(201, 125, 96, 0.08);
+    border: 1px solid #C97D60;
+    border-radius: 6px;
+    max-width: 480px;
+  }
+  .admin-update-form .field-label { color: #C97D60; margin-bottom: 6px; }
+  .admin-update-form .edit-input { margin-bottom: 8px; }
+  .admin-update-note {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
   .record-actions {
     display: flex;
     gap: 20px;
@@ -325,12 +471,29 @@
 </style>
 </head>
 <body>
+<div class="password-modal-backdrop" id="pwModalBackdrop" style="display:none;">
+  <div class="password-modal">
+    <div class="field-label" style="color:#C97D60;">Admin Access</div>
+    <p class="admin-update-note" style="margin-bottom:14px;">Enter the admin password to enable editing.</p>
+    <input type="password" class="edit-input" id="pwModalInput" placeholder="Password" autocomplete="off">
+    <div class="pw-modal-error" id="pwModalError" style="display:none;">Incorrect password.</div>
+    <div class="edit-actions">
+      <button class="edit-save-btn" id="pwModalSubmit">Unlock</button>
+      <button class="edit-cancel-btn" id="pwModalCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="wrap">
 
   <div class="eyebrow" id="updatedOn">Updated on</div>
   <h1>Grand River Hills Inc. Almanac</h1>
   <p class="lede">A dashboard view for scanning across initiatives, and a full record beneath each row.
   Sort any column. Click an initiative to open its progress record.</p>
+
+  <div class="admin-bar">
+    <button class="admin-toggle-btn" id="adminToggleBtn">Admin Mode: Off</button>
+    <span class="admin-status" id="adminStatusLabel" style="display:none;">Editing enabled — static fields edit in place, tracked fields log an update</span>
+  </div>
 
   <div class="table-shell">
     <div class="header-row">
@@ -376,6 +539,179 @@ let sortKey = "opportunity";
 let sortDir = "desc";
 let expandedId = null;
 const log = [];
+
+/* Admin Mode (Decision 10) -- HTML/functional mockup only. Static fields
+   edit in place; history-tracked attribute fields open a small "Admin
+   Update" form instead, matching Decision 2's never-overwrite rule.
+   Nothing here writes to Supabase yet -- this is the design/interaction
+   layer, wiring comes after. */
+let adminMode = false;
+let editingField = null;   // { itemId, path } for static in-place edits
+let updatingAttr = null;   // { itemId, attr } for attribute Admin Update forms
+
+function getField(item, path) {
+  return path.split(".").reduce((o, k) => (o ? o[k] : undefined), item);
+}
+function setField(item, path, value) {
+  const parts = path.split(".");
+  let o = item;
+  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+  o[parts[parts.length - 1]] = value;
+}
+
+function enableAdminMode() {
+  adminMode = true;
+  document.body.classList.add("admin-mode");
+  document.getElementById("adminToggleBtn").classList.add("on");
+  document.getElementById("adminToggleBtn").textContent = "Admin Mode: On";
+  document.getElementById("adminStatusLabel").style.display = "inline";
+  render();
+}
+
+function disableAdminMode() {
+  adminMode = false;
+  editingField = null;
+  updatingAttr = null;
+  document.body.classList.remove("admin-mode");
+  document.getElementById("adminToggleBtn").classList.remove("on");
+  document.getElementById("adminToggleBtn").textContent = "Admin Mode: Off";
+  document.getElementById("adminStatusLabel").style.display = "none";
+  render();
+}
+
+function showPasswordModal() {
+  document.getElementById("pwModalError").style.display = "none";
+  document.getElementById("pwModalInput").value = "";
+  document.getElementById("pwModalBackdrop").style.display = "flex";
+  document.getElementById("pwModalInput").focus();
+}
+function hidePasswordModal() {
+  document.getElementById("pwModalBackdrop").style.display = "none";
+}
+
+async function submitPasswordModal() {
+  const input = document.getElementById("pwModalInput").value;
+  const errEl = document.getElementById("pwModalError");
+  const submitBtn = document.getElementById("pwModalSubmit");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Checking…";
+  try {
+    const ok = await checkAdminPassword(input);
+    if (ok) {
+      hidePasswordModal();
+      enableAdminMode();
+    } else {
+      errEl.textContent = "Incorrect password.";
+      errEl.style.display = "block";
+      document.getElementById("pwModalInput").value = "";
+      document.getElementById("pwModalInput").focus();
+    }
+  } catch (err) {
+    errEl.textContent = "Couldn't reach the server to check the password.";
+    errEl.style.display = "block";
+    console.error(err);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Unlock";
+  }
+}
+
+document.getElementById("adminToggleBtn").addEventListener("click", () => {
+  if (adminMode) {
+    disableAdminMode();
+  } else {
+    showPasswordModal();
+  }
+});
+document.getElementById("pwModalSubmit").addEventListener("click", submitPasswordModal);
+document.getElementById("pwModalCancel").addEventListener("click", hidePasswordModal);
+document.getElementById("pwModalInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitPasswordModal();
+});
+
+// Renders a static field: plain text normally, or an editable textarea +
+// Save/Cancel when this exact field is the one currently being edited.
+function renderEditableField(item, path, label, multiline) {
+  const isEditing = editingField && editingField.itemId === item.id && editingField.path === path;
+  const value = getField(item, path) || "";
+  if (isEditing) {
+    const tag = multiline ? "textarea" : "input";
+    return `
+      <div>
+        <div class="field-label">${label}</div>
+        <${tag} class="edit-${multiline ? "textarea" : "input"}" id="editbox-${item.id}-${path}" ${multiline ? `rows="4">${value}</textarea>` : `value="${value.replace(/"/g, "&quot;")}">`}
+        <div class="edit-actions">
+          <button class="edit-save-btn" data-save-field="${item.id}|${path}">Save</button>
+          <button class="edit-cancel-btn" data-cancel-field="1">Cancel</button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div>
+      <div class="field-label">${label}</div>
+      <div class="field-text editable-field" data-edit-field="${item.id}|${path}">${value}</div>
+    </div>
+  `;
+}
+
+// Renders an attribute-tracked field: plain text + an "Update" trigger,
+// or the small Admin Update form (value + optional note) when open.
+function renderAttrField(item, attr, label, currentValue) {
+  const isOpen = updatingAttr && updatingAttr.itemId === item.id && updatingAttr.attr === attr;
+  const formHtml = isOpen ? `
+    <div class="admin-update-form">
+      <div class="field-label">Admin Update — ${label}</div>
+      <div class="admin-update-note">This appends a new entry; it never overwrites the value above (Decision 2).</div>
+      <input class="edit-input" id="attrval-${item.id}-${attr}" value="${String(currentValue).replace(/"/g, "&quot;")}">
+      <input class="edit-input" id="attrnote-${item.id}-${attr}" placeholder="Optional note">
+      <div class="edit-actions">
+        <button class="edit-save-btn" data-save-attr="${item.id}|${attr}">Save Update</button>
+        <button class="edit-cancel-btn" data-cancel-attr="1">Cancel</button>
+      </div>
+    </div>
+  ` : "";
+  return `
+    <div>
+      <div class="field-label attr-field">${label}
+        <span class="attr-update-trigger" data-open-attr="${item.id}|${attr}">Update →</span>
+      </div>
+      <div class="field-text">${currentValue}</div>
+      ${formHtml}
+    </div>
+  `;
+}
+
+// Opportunity is a fixed set of tiers, not free text -- same Admin
+// Update pattern as renderAttrField, but with a <select> for the value.
+function renderOpportunityField(item) {
+  const attr = "opportunity";
+  const isOpen = updatingAttr && updatingAttr.itemId === item.id && updatingAttr.attr === attr;
+  const options = Object.keys(STATUS_META).map(k =>
+    `<option value="${k}" ${k === item.opportunity ? "selected" : ""}>${STATUS_META[k].label}</option>`
+  ).join("");
+  const formHtml = isOpen ? `
+    <div class="admin-update-form">
+      <div class="field-label">Admin Update — Opportunity</div>
+      <div class="admin-update-note">This appends a new entry; it never overwrites the value above (Decision 2).</div>
+      <select class="edit-input" id="attrsel-${item.id}-${attr}">${options}</select>
+      <input class="edit-input" id="attrnote-${item.id}-${attr}" placeholder="Optional note">
+      <div class="edit-actions">
+        <button class="edit-save-btn" data-save-attr="${item.id}|${attr}">Save Update</button>
+        <button class="edit-cancel-btn" data-cancel-attr="1">Cancel</button>
+      </div>
+    </div>
+  ` : "";
+  return `
+    <div>
+      <div class="field-label attr-field">Opportunity
+        <span class="attr-update-trigger" data-open-attr="${item.id}|${attr}">Update →</span>
+      </div>
+      <div class="field-text">${STATUS_META[item.opportunity].label}</div>
+      ${formHtml}
+    </div>
+  `;
+}
 
 function sortedData() {
   const rows = [...DATA];
@@ -432,12 +768,14 @@ function render() {
       <p class="entity-source">${entitySourceLine(item)}</p>
       <hr class="entity-divider">
       <div class="record-grid">
-        <div><div class="field-label">Summary Description</div><div class="field-text">${item.summary}</div></div>
-        <div><div class="field-label">Current Development Status</div><div class="field-text">${item.buildStatus}</div></div>
-        <div><div class="field-label">Market Position</div><div class="field-text">${item.body.market}</div></div>
-        <div><div class="field-label">Differentiation</div><div class="field-text">${item.body.differentiation}</div></div>
-        <div><div class="field-label">Friction Points</div><div class="field-text">${item.body.frictionPoints}</div></div>
-        <div><div class="field-label">Next Decision Point</div><div class="field-text">${item.body.nextDecision}</div></div>
+        ${renderEditableField(item, "summary", "Summary Description", true)}
+        ${renderAttrField(item, "buildStatus", "Current Development Status", item.buildStatus)}
+        ${renderEditableField(item, "body.market", "Market Position", true)}
+        ${renderEditableField(item, "body.differentiation", "Differentiation", true)}
+        ${renderAttrField(item, "frictionPoints", "Friction Points", item.body.frictionPoints)}
+        ${renderEditableField(item, "body.nextDecision", "Next Decision Point", true)}
+        ${adminMode ? renderAttrField(item, "competitors", "Competitors", item.competitors) : ""}
+        ${adminMode ? renderOpportunityField(item) : ""}
       </div>
       <div class="record-actions">
         <a class="full-record-btn" href="grhAlmanac_detail.html?id=${item.id}">View the Full Initiative Record <span class="arrow-right">→</span></a>
@@ -445,6 +783,72 @@ function render() {
       </div>
     `;
     tbody.appendChild(recordEl);
+
+    // Static-field in-place edit: click text -> input, Save/Cancel.
+    recordEl.querySelectorAll("[data-edit-field]").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const [itemId, path] = el.dataset.editField.split("|");
+        editingField = { itemId, path };
+        updatingAttr = null;
+        render();
+      });
+    });
+    recordEl.querySelectorAll("[data-save-field]").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const [itemId, path] = el.dataset.saveField.split("|");
+        const target = DATA.find(d => d.id === itemId);
+        const box = document.getElementById(`editbox-${itemId}-${path}`);
+        setField(target, path, box.value);
+        editingField = null;
+        render();
+      });
+    });
+    recordEl.querySelectorAll("[data-cancel-field]").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        editingField = null;
+        render();
+      });
+    });
+
+    // Attribute-tracked field: click "Update" -> small Admin Update form.
+    recordEl.querySelectorAll("[data-open-attr]").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const [itemId, attr] = el.dataset.openAttr.split("|");
+        updatingAttr = { itemId, attr };
+        editingField = null;
+        render();
+      });
+    });
+    recordEl.querySelectorAll("[data-save-attr]").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const [itemId, attr] = el.dataset.saveAttr.split("|");
+        const target = DATA.find(d => d.id === itemId);
+        const valBox = document.getElementById(`attrval-${itemId}-${attr}`) || document.getElementById(`attrsel-${itemId}-${attr}`);
+        const newVal = valBox.value;
+        // Mock only: updates the displayed "current" value. Real wiring
+        // appends a new row to the relevant attribute table (Decision 2)
+        // rather than overwriting -- this HTML pass shows the interaction,
+        // not the persistence.
+        if (attr === "buildStatus") target.buildStatus = newVal;
+        else if (attr === "frictionPoints") target.body.frictionPoints = newVal;
+        else if (attr === "competitors") target.competitors = newVal;
+        else if (attr === "opportunity") target.opportunity = newVal;
+        updatingAttr = null;
+        render();
+      });
+    });
+    recordEl.querySelectorAll("[data-cancel-attr]").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        updatingAttr = null;
+        render();
+      });
+    });
   });
 
   document.querySelectorAll(".th").forEach(btn => {

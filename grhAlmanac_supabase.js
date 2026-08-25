@@ -3,12 +3,34 @@
 // DATA array shape grhAlmanac_index.html and grhAlmanac_detail.html
 // already expect -- so no other rendering code needed to change.
 //
-// Read-only: this key is a publishable/anon key, restricted to SELECT
-// by Row Level Security policies on the database side (Decision 59/RLS
-// migration). It cannot write, regardless of what's in this file.
+// Read-only for data: this key is a publishable/anon key, restricted to
+// SELECT by Row Level Security policies on the database side (Decision
+// 59/RLS migration). It cannot write initiative data, regardless of
+// what's in this file. The one exception is checkAdminPassword() below,
+// which can only call a single narrow RPC -- it can never read or write
+// the password table directly (Decision 66).
 
 const SUPABASE_URL = "https://hwcrapebwttyhvwsymbr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_qg-YWKvSI21k8AnTfRxNEQ_qGmLw_nq";
+
+async function checkAdminPassword(input) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/rpc/check_admin_password`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ input_password: input }),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`Password check failed: ${res.status} ${res.statusText}`);
+  }
+  return res.json(); // true or false -- never the stored value itself
+}
 
 async function loadInitiatives() {
   const res = await fetch(
