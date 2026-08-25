@@ -36,6 +36,10 @@ async function loadInitiatives() {
     buildStatus: r.build_status,
     competitors: r.competitors,
     summary: r.summary,
+    // Decision 19: "Updated On" is backend-driven, not a hardcoded string --
+    // this is the real updated_at timestamp, maintained automatically by
+    // the version-bump trigger on every write (Decision 59).
+    lastUpdated: new Date(r.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     body: {
       market: r.market,
       differentiation: r.differentiation,
