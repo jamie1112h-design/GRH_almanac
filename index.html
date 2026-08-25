@@ -784,10 +784,17 @@ function render() {
     `;
     tbody.appendChild(recordEl);
 
+    // Every handler below re-checks adminMode at click time -- not just
+    // relying on CSS to hide the affordance, since a stale click listener
+    // on a still-present DOM element would otherwise still fire even with
+    // the visual hint hidden. This was a real bug (caught in testing):
+    // the four static fields were editable regardless of admin state.
+
     // Static-field in-place edit: click text -> input, Save/Cancel.
     recordEl.querySelectorAll("[data-edit-field]").forEach(el => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!adminMode) return;
         const [itemId, path] = el.dataset.editField.split("|");
         editingField = { itemId, path };
         updatingAttr = null;
@@ -797,6 +804,7 @@ function render() {
     recordEl.querySelectorAll("[data-save-field]").forEach(el => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!adminMode) return;
         const [itemId, path] = el.dataset.saveField.split("|");
         const target = DATA.find(d => d.id === itemId);
         const box = document.getElementById(`editbox-${itemId}-${path}`);
@@ -808,6 +816,7 @@ function render() {
     recordEl.querySelectorAll("[data-cancel-field]").forEach(el => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!adminMode) return;
         editingField = null;
         render();
       });
@@ -817,6 +826,7 @@ function render() {
     recordEl.querySelectorAll("[data-open-attr]").forEach(el => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!adminMode) return;
         const [itemId, attr] = el.dataset.openAttr.split("|");
         updatingAttr = { itemId, attr };
         editingField = null;
@@ -826,6 +836,7 @@ function render() {
     recordEl.querySelectorAll("[data-save-attr]").forEach(el => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!adminMode) return;
         const [itemId, attr] = el.dataset.saveAttr.split("|");
         const target = DATA.find(d => d.id === itemId);
         const valBox = document.getElementById(`attrval-${itemId}-${attr}`) || document.getElementById(`attrsel-${itemId}-${attr}`);
@@ -845,6 +856,7 @@ function render() {
     recordEl.querySelectorAll("[data-cancel-attr]").forEach(el => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!adminMode) return;
         updatingAttr = null;
         render();
       });
