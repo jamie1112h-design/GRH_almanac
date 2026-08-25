@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grand River Hills Inc. Almanac – Initiative Record</title>
+<style>
+  :root {
+    --bg: #14181F;
+    --surface: #1C2230;
+    --surface-alt: #191E29;
+    --record-bg: #181D28;
+    --border: #2A3142;
+    --text-primary: #F4F1E8;
+    --text-body: #E8E4D8;
+    --text-muted: #8B93A6;
+    --text-dim: #6B7280;
+    --gold: #C9A227;
+    --status-strong: #6B9B6E;
+    --status-developing: #C9A227;
+    --status-early: #8A93A6;
+    --status-idea: #5B6272;
+    --font-display: Georgia, "Times New Roman", serif;
+    --font-body: Arial, Helvetica, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-body);
+    font-family: var(--font-body);
+    padding: 32px 20px 300px;
+  }
+
+  .wrap { max-width: 1000px; margin: 0 auto; }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 16px;
+    text-decoration: none;
+    margin-bottom: 18px;
+  }
+  .back-link:hover { color: var(--gold); }
+  .back-link-bottom { margin-top: 32px; margin-bottom: 0; }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .entity-badge {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: var(--bg);
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  .entity-grhi { background: #8FA6C9; }
+  .entity-grht { background: #C9A227; }
+  .entity-grhp { background: #A98BC4; }
+  .entity-grhcy { background: #5FB3B3; }
+  .entity-grhci { background: #C97D60; }
+  .entity-grhns { background: #7FB069; }
+  .entity-grhbc { background: #4A7A8C; }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--bg);
+    white-space: nowrap;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 400;
+    margin: 0;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 14px;
+  }
+
+  .badges { margin-top: 10px; }
+
+  .entity-source {
+    font-size: 13.5px;
+    color: #D6D8DA;
+    line-height: 1.55;
+    margin: 14px 0 0;
+    max-width: 780px;
+  }
+
+  .summary-text {
+    font-size: 14.5px;
+    color: #C7CCD6;
+    line-height: 1.6;
+    margin: 10px 0 0;
+    max-width: 780px;
+  }
+
+  .panel {
+    margin-top: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 22px 24px;
+  }
+
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .panel-note {
+    font-size: 15px;
+    color: var(--text-primary);
+    margin: 0 0 16px;
+    max-width: 680px;
+    line-height: 1.55;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 5px;
+  }
+
+  .field-text {
+    font-size: 13.5px;
+    color: #D6D8DA;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  .field-note {
+    font-size: 13.5px;
+    color: #C7CCD6;
+    font-style: italic;
+    line-height: 1.55;
+    max-width: 820px;
+    margin: 0 0 6px;
+  }
+
+  .field-block + .field-block { margin-top: 16px; }
+
+  .empty-state {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .comp-line {
+    font-size: 13.5px;
+    color: #D6D8DA;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  table.val-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  table.val-table th {
+    text-align: left;
+    font-size: 13.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.val-table th.num { text-align: right; }
+
+  table.val-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    color: #C7CCD6;
+    vertical-align: top;
+  }
+  table.val-table tr:last-child td { border-bottom: none; }
+
+  table.val-table td.num {
+    text-align: right;
+    font-family: var(--font-display);
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .val-note-text { max-width: 320px; }
+
+  .not-found {
+    margin-top: 60px;
+    text-align: center;
+  }
+  .not-found-text {
+    color: var(--text-muted);
+    font-size: 15px;
+    margin: 0 0 20px;
+  }
+
+  .full-record-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .full-record-btn:hover {
+    background: var(--gold);
+    color: var(--bg);
+  }
+  .full-record-btn .arrow-right { font-size: 14px; }
+
+  @media (max-width: 700px) {
+    table.val-table { display: block; overflow-x: auto; white-space: nowrap; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <a class="back-link" href="grhAlmanac_index.html">← Back to Almanac</a>
+  <div class="eyebrow" id="updatedOn">Updated on</div>
+  <div id="content"></div>
+  <a class="back-link back-link-bottom" href="grhAlmanac_index.html">← Back to Almanac</a>
+</div>
+
+<script src="grhAlmanac_data.js"></script>
+<script>
+document.getElementById("updatedOn").textContent = "Updated on " + new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+const item = DATA.find(d => d.id === id);
+const contentEl = document.getElementById("content");
+
+function renderNotFound() {
+  contentEl.innerHTML = `
+    <div class="not-found">
+      <a class="full-record-btn" href="grhAlmanac_index.html">Page is Not Populated Yet – Return to Front Page <span class="arrow-right">→</span></a>
+    </div>
+  `;
+}
+
+function renderValuationTable(valuation) {
+  if (!valuation || !valuation.methods || valuation.methods.length === 0) {
+    return `<div class="empty-state">Not yet modeled – no valuation methods or assumptions have been logged for this initiative yet.</div>`;
+  }
+  const rows = valuation.methods.map(m => `
+    <tr>
+      <td>
+        <div class="field-label">${m.name}</div>
+        <div class="field-text val-note-text">${m.assumptions || "Assumptions not yet defined."}</div>
+      </td>
+      <td class="num">${m.year1 ?? "—"}</td>
+      <td class="num">${m.year3 ?? "—"}</td>
+      <td class="num">${m.year5 ?? "—"}</td>
+    </tr>
+  `).join("");
+  return `
+    <table class="val-table">
+      <thead>
+        <tr>
+          <th>Method &amp; Assumptions</th>
+          <th class="num">Year 1</th>
+          <th class="num">Year 3</th>
+          <th class="num">Year 5</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function render() {
+  if (!item) {
+    renderNotFound();
+    return;
+  }
+  const ent = ENTITY_META[item.entity];
+  const status = STATUS_META[item.opportunity];
+  const na = "Not yet assessed – no analysis has been logged for this initiative yet.";
+  const field = (val) => val || na;
+
+  contentEl.innerHTML = `
+    <h1>${item.name} – Grand River Hills Inc. Almanac</h1>
+    <div class="badges">
+      <span class="entity-badge ${ent.cls}" title="${ent.full}">${ent.label}</span>
+      <span class="status-pill" style="background:${status.color}">${status.label}</span>
+    </div>
+    <p class="entity-source">${entitySourceLine(item)}</p>
+    <p class="summary-text">${item.summary}</p>
+
+    <div class="panel">
+      <div class="panel-title">Market Assessment</div>
+      <p class="panel-note">Value proposition, product scope, and marketing positioning for this initiative.</p>
+      <div class="field-block">
+        <div class="field-label">Value Proposition</div>
+        <div class="field-text">${field(item.body.valueProposition)}</div>
+      </div>
+      <div class="field-block">
+        <div class="field-label">Minimum Viable Product Description</div>
+        <div class="field-text">${field(item.body.mvpDescription)}</div>
+      </div>
+      <div class="field-block">
+        <div class="field-label">Slated Product Line Enhancements</div>
+        <div class="field-text">${field(item.body.productEnhancements)}</div>
+      </div>
+      <div class="field-block">
+        <div class="field-label">Marketing Summary</div>
+        <div class="field-note">Touching on the 7 P's of Marketing – Product, Price, Place, Promotion, People, Process, Physical Evidence.</div>
+        <div class="field-text">${field(item.body.marketingSummary)}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Competitor Positioning</div>
+      <p class="panel-note">Landscape, strongest direct competitors, and differentiation for this initiative.</p>
+      <div class="field-block">
+        <div class="field-label">Competitive Landscape</div>
+        <div class="field-text">${field(item.body.competitiveLandscape)}</div>
+      </div>
+      <div class="field-block">
+        <div class="field-label">Strongest Direct Competitors</div>
+        <div class="field-text">${field(item.competitors)}</div>
+      </div>
+      <div class="field-block">
+        <div class="field-label">Differentiation</div>
+        <div class="field-text">${field(item.body.differentiation)}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Valuations Forecasting</div>
+      <p class="panel-note">By method and assumptions, projected across Year 1, Year 3, and Year 5.</p>
+      ${renderValuationTable(item.valuation)}
+    </div>
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
