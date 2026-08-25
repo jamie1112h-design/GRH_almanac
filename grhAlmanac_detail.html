@@ -264,13 +264,14 @@
   <a class="back-link back-link-bottom" href="index.html">← Back to Almanac</a>
 </div>
 
-<script src="grhAlmanac_data.js"></script>
+<script src="grhAlmanac_config.js"></script>
+<script src="grhAlmanac_supabase.js"></script>
 <script>
 document.getElementById("updatedOn").textContent = "Updated on " + new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
 const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
-const item = DATA.find(d => d.id === id);
+let item = null;
 const contentEl = document.getElementById("content");
 
 function renderNotFound() {
@@ -377,7 +378,20 @@ function render() {
   `;
 }
 
-render();
+(async () => {
+  try {
+    const DATA = await loadInitiatives();
+    item = DATA.find(d => d.id === id);
+    render();
+  } catch (err) {
+    contentEl.innerHTML = `
+      <div class="not-found">
+        <p style="color:#C97D60; font-size:14px;">Couldn't load initiative data from the database. ${err.message}</p>
+      </div>
+    `;
+    console.error(err);
+  }
+})();
 </script>
 </body>
 </html>

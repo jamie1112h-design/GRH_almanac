@@ -343,7 +343,7 @@
       <button class="th col-comp" data-key="competitors">Competitors<span class="arrow">↕</span></button>
       <button class="th col-updated" data-key="lastUpdated">Updated<span class="arrow">↕</span></button>
     </div>
-    <div id="tbody"></div>
+    <div id="tbody"><div style="padding:32px; text-align:center; color:var(--text-muted); font-size:13.5px;">Loading initiatives…</div></div>
   </div>
 
   <button class="full-record-btn" id="emailJamieBtn" style="margin-top:32px;">Email Jamie <span class="arrow-right">→</span></button>
@@ -361,14 +361,17 @@
 
 </div>
 
-<script src="grhAlmanac_data.js"></script>
+<script src="grhAlmanac_config.js"></script>
+<script src="grhAlmanac_supabase.js"></script>
 <script>
 document.getElementById("updatedOn").textContent = "Updated on " + new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-/* STATUS_META, ENTITY_META, CATEGORY_DESCRIPTORS, entitySourceLine(), and DATA
-   now live in grhAlmanac_data.js (loaded via <script src> above this block),
+/* STATUS_META, ENTITY_META, CATEGORY_DESCRIPTORS, and entitySourceLine()
+   live in grhAlmanac_config.js. DATA is no longer static -- it's fetched
+   live from Supabase via loadInitiatives() in grhAlmanac_supabase.js,
    shared with grhAlmanac_detail.html so both pages read the same source. */
 
+let DATA = [];
 let sortKey = "opportunity";
 let sortDir = "desc";
 let expandedId = null;
@@ -494,7 +497,18 @@ function renderLog() {
   });
 }
 
-render();
+(async () => {
+  try {
+    DATA = await loadInitiatives();
+    render();
+  } catch (err) {
+    document.getElementById("tbody").innerHTML =
+      `<div style="padding:32px; text-align:center; color:#C97D60; font-size:13.5px;">
+         Couldn't load initiatives from the database. ${err.message}
+       </div>`;
+    console.error(err);
+  }
+})();
 </script>
 </body>
 </html>
