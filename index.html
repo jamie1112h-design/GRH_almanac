@@ -546,8 +546,10 @@ const log = [];
    Nothing here writes to Supabase yet -- this is the design/interaction
    layer, wiring comes after. */
 let adminMode = false;
+let adminPassword = null;  // held in-memory only, cleared on disable/reload
 let editingField = null;   // { itemId, path } for static in-place edits
 let updatingAttr = null;   // { itemId, attr } for attribute Admin Update forms
+let saveError = null;      // { key, message } -- key matches editingField/updatingAttr's field/attr identity
 
 function getField(item, path) {
   return path.split(".").reduce((o, k) => (o ? o[k] : undefined), item);
@@ -558,6 +560,21 @@ function setField(item, path, value) {
   for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
   o[parts[parts.length - 1]] = value;
 }
+
+// Maps the JS-side path/attr names used in the UI to the actual SQL
+// field/table names the write functions expect.
+const STATIC_FIELD_MAP = {
+  "summary": "summary",
+  "body.market": "market",
+  "body.differentiation": "differentiation",
+  "body.nextDecision": "next_decision",
+};
+const ATTR_TABLE_MAP = {
+  "buildStatus": "build_status",
+  "frictionPoints": "friction_points",
+  "competitors": "competitors",
+  "opportunity": "opportunity_status",
+};
 
 function enableAdminMode() {
   adminMode = true;
@@ -570,8 +587,10 @@ function enableAdminMode() {
 
 function disableAdminMode() {
   adminMode = false;
+  adminPassword = null;
   editingField = null;
   updatingAttr = null;
+  saveError = null;
   document.body.classList.remove("admin-mode");
   document.getElementById("adminToggleBtn").classList.remove("on");
   document.getElementById("adminToggleBtn").textContent = "Admin Mode: Off";
@@ -598,6 +617,7 @@ async function submitPasswordModal() {
   try {
     const ok = await checkAdminPassword(input);
     if (ok) {
+      adminPassword = input;
       hidePasswordModal();
       enableAdminMode();
     } else {
@@ -636,10 +656,14 @@ function renderEditableField(item, path, label, multiline) {
   const value = getField(item, path) || "";
   if (isEditing) {
     const tag = multiline ? "textarea" : "input";
+    const errKey = `${item.id}|${path}`;
+    const errHtml = (saveError && saveError.key === errKey)
+      ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
     return `
       <div>
         <div class="field-label">${label}</div>
         <${tag} class="edit-${multiline ? "textarea" : "input"}" id="editbox-${item.id}-${path}" ${multiline ? `rows="4">${value}</textarea>` : `value="${value.replace(/"/g, "&quot;")}">`}
+        ${errHtml}
         <div class="edit-actions">
           <button class="edit-save-btn" data-save-field="${item.id}|${path}">Save</button>
           <button class="edit-cancel-btn" data-cancel-field="1">Cancel</button>
@@ -659,12 +683,16 @@ function renderEditableField(item, path, label, multiline) {
 // or the small Admin Update form (value + optional note) when open.
 function renderAttrField(item, attr, label, currentValue) {
   const isOpen = updatingAttr && updatingAttr.itemId === item.id && updatingAttr.attr === attr;
+  const errKey = `${item.id}|${attr}`;
+  const errHtml = (saveError && saveError.key === errKey)
+    ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
   const formHtml = isOpen ? `
     <div class="admin-update-form">
       <div class="field-label">Admin Update — ${label}</div>
       <div class="admin-update-note">This appends a new entry; it never overwrites the value above (Decision 2).</div>
       <input class="edit-input" id="attrval-${item.id}-${attr}" value="${String(currentValue).replace(/"/g, "&quot;")}">
       <input class="edit-input" id="attrnote-${item.id}-${attr}" placeholder="Optional note">
+      ${errHtml}
       <div class="edit-actions">
         <button class="edit-save-btn" data-save-attr="${item.id}|${attr}">Save Update</button>
         <button class="edit-cancel-btn" data-cancel-attr="1">Cancel</button>
@@ -687,6 +715,9 @@ function renderAttrField(item, attr, label, currentValue) {
 function renderOpportunityField(item) {
   const attr = "opportunity";
   const isOpen = updatingAttr && updatingAttr.itemId === item.id && updatingAttr.attr === attr;
+  const errKey = `${item.id}|${attr}`;
+  const errHtml = (saveError && saveError.key === errKey)
+    ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
   const options = Object.keys(STATUS_META).map(k =>
     `<option value="${k}" ${k === item.opportunity ? "selected" : ""}>${STATUS_META[k].label}</option>`
   ).join("");
@@ -696,6 +727,7 @@ function renderOpportunityField(item) {
       <div class="admin-update-note">This appends a new entry; it never overwrites the value above (Decision 2).</div>
       <select class="edit-input" id="attrsel-${item.id}-${attr}">${options}</select>
       <input class="edit-input" id="attrnote-${item.id}-${attr}" placeholder="Optional note">
+      ${errHtml}
       <div class="edit-actions">
         <button class="edit-save-btn" data-save-attr="${item.id}|${attr}">Save Update</button>
         <button class="edit-cancel-btn" data-cancel-attr="1">Cancel</button>
@@ -802,14 +834,29 @@ function render() {
       });
     });
     recordEl.querySelectorAll("[data-save-field]").forEach(el => {
-      el.addEventListener("click", (e) => {
+      el.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (!adminMode) return;
         const [itemId, path] = el.dataset.saveField.split("|");
         const target = DATA.find(d => d.id === itemId);
         const box = document.getElementById(`editbox-${itemId}-${path}`);
-        setField(target, path, box.value);
-        editingField = null;
+        const newValue = box.value;
+        const sqlField = STATIC_FIELD_MAP[path];
+        const errKey = `${itemId}|${path}`;
+        el.disabled = true;
+        el.textContent = "Saving…";
+        try {
+          const ok = await adminUpdateStaticField(adminPassword, itemId, sqlField, newValue, target.version);
+          if (ok) {
+            DATA = await loadInitiatives(); // refetch so version/state reflect the real DB
+            editingField = null;
+            saveError = null;
+          } else {
+            saveError = { key: errKey, message: "This was edited elsewhere since you loaded the page. Reload to see the latest version before saving." };
+          }
+        } catch (err) {
+          saveError = { key: errKey, message: err.message || "Save failed." };
+        }
         render();
       });
     });
@@ -818,6 +865,7 @@ function render() {
         e.stopPropagation();
         if (!adminMode) return;
         editingField = null;
+        saveError = null;
         render();
       });
     });
@@ -830,26 +878,31 @@ function render() {
         const [itemId, attr] = el.dataset.openAttr.split("|");
         updatingAttr = { itemId, attr };
         editingField = null;
+        saveError = null;
         render();
       });
     });
     recordEl.querySelectorAll("[data-save-attr]").forEach(el => {
-      el.addEventListener("click", (e) => {
+      el.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (!adminMode) return;
         const [itemId, attr] = el.dataset.saveAttr.split("|");
-        const target = DATA.find(d => d.id === itemId);
         const valBox = document.getElementById(`attrval-${itemId}-${attr}`) || document.getElementById(`attrsel-${itemId}-${attr}`);
+        const noteBox = document.getElementById(`attrnote-${itemId}-${attr}`);
         const newVal = valBox.value;
-        // Mock only: updates the displayed "current" value. Real wiring
-        // appends a new row to the relevant attribute table (Decision 2)
-        // rather than overwriting -- this HTML pass shows the interaction,
-        // not the persistence.
-        if (attr === "buildStatus") target.buildStatus = newVal;
-        else if (attr === "frictionPoints") target.body.frictionPoints = newVal;
-        else if (attr === "competitors") target.competitors = newVal;
-        else if (attr === "opportunity") target.opportunity = newVal;
-        updatingAttr = null;
+        const note = noteBox ? noteBox.value : null;
+        const sqlTable = ATTR_TABLE_MAP[attr];
+        const errKey = `${itemId}|${attr}`;
+        el.disabled = true;
+        el.textContent = "Saving…";
+        try {
+          await adminInsertAttribute(adminPassword, itemId, sqlTable, newVal, note);
+          DATA = await loadInitiatives(); // refetch so the new "latest" value shows immediately
+          updatingAttr = null;
+          saveError = null;
+        } catch (err) {
+          saveError = { key: errKey, message: err.message || "Save failed." };
+        }
         render();
       });
     });
@@ -858,6 +911,7 @@ function render() {
         e.stopPropagation();
         if (!adminMode) return;
         updatingAttr = null;
+        saveError = null;
         render();
       });
     });

@@ -3,19 +3,19 @@
 // DATA array shape grhAlmanac_index.html and grhAlmanac_detail.html
 // already expect -- so no other rendering code needed to change.
 //
-// Read-only for data: this key is a publishable/anon key, restricted to
-// SELECT by Row Level Security policies on the database side (Decision
-// 59/RLS migration). It cannot write initiative data, regardless of
-// what's in this file. The one exception is checkAdminPassword() below,
-// which can only call a single narrow RPC -- it can never read or write
-// the password table directly (Decision 66).
+// All writes route through SECURITY DEFINER functions (checkAdminPassword,
+// adminUpdateStaticField, adminInsertAttribute) that verify the admin
+// password server-side before touching any table. This key can never
+// read or write any table directly -- RLS default-denies the public
+// role on every table; these three functions are the only doorway
+// (Decisions 61, 67, 69).
 
 const SUPABASE_URL = "https://hwcrapebwttyhvwsymbr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_qg-YWKvSI21k8AnTfRxNEQ_qGmLw_nq";
 
-async function checkAdminPassword(input) {
+async function callRpc(fnName, body) {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/rpc/check_admin_password`,
+    `${SUPABASE_URL}/rest/v1/rpc/${fnName}`,
     {
       method: "POST",
       headers: {
@@ -23,13 +23,48 @@ async function checkAdminPassword(input) {
         Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ input_password: input }),
+      body: JSON.stringify(body),
     }
   );
   if (!res.ok) {
-    throw new Error(`Password check failed: ${res.status} ${res.statusText}`);
+    // Postgres RAISE EXCEPTION (e.g. wrong password) surfaces here as a
+    // non-2xx response with a message -- surface it to the caller rather
+    // than swallowing it.
+    let detail = res.statusText;
+    try { detail = (await res.json()).message || detail; } catch (_) {}
+    throw new Error(detail);
   }
-  return res.json(); // true or false -- never the stored value itself
+  return res.json();
+}
+
+async function checkAdminPassword(input) {
+  return callRpc("check_admin_password", { input_password: input });
+}
+
+// Static fields (Decision 2, 6): a real overwrite, but only if the
+// version passed still matches what's live -- returns false (not a
+// thrown error) on a stale write, so the caller can tell "someone
+// else edited this" apart from a genuine failure.
+async function adminUpdateStaticField(password, initiativeId, field, value, expectedVersion) {
+  return callRpc("admin_update_static_field", {
+    input_password: password,
+    p_initiative_id: initiativeId,
+    p_field: field,
+    p_value: value,
+    p_expected_version: expectedVersion,
+  });
+}
+
+// Attribute-tracked fields (Decision 2, 9): always a new row, never an
+// overwrite.
+async function adminInsertAttribute(password, initiativeId, attrTable, value, note) {
+  return callRpc("admin_insert_attribute", {
+    input_password: password,
+    p_initiative_id: initiativeId,
+    p_attr_table: attrTable,
+    p_value: value,
+    p_note: note || null,
+  });
 }
 
 async function loadInitiatives() {
@@ -58,6 +93,7 @@ async function loadInitiatives() {
     buildStatus: r.build_status,
     competitors: r.competitors,
     summary: r.summary,
+    version: r.version, // needed client-side for the optimistic-concurrency write check
     // Decision 19: "Updated On" is backend-driven, not a hardcoded string --
     // this is the real updated_at timestamp, maintained automatically by
     // the version-bump trigger on every write (Decision 59).
