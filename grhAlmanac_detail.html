@@ -214,7 +214,9 @@
     text-align: right;
     font-family: var(--font-display);
     color: var(--text-primary);
-    white-space: nowrap;
+    max-width: 220px;
+    white-space: normal;
+    line-height: 1.5;
   }
 
   .val-note-text { max-width: 320px; }
@@ -286,15 +288,20 @@ function renderValuationTable(valuation) {
   if (!valuation || !valuation.methods || valuation.methods.length === 0) {
     return `<div class="empty-state">Not yet modeled – no valuation methods or assumptions have been logged for this initiative yet.</div>`;
   }
+  // Converts a stored literal newline into a real line break -- used so a
+  // Year cell holding more than one dollar figure can force each figure
+  // onto its own line (Jamie's convention: a new revenue/cost number
+  // always starts a fresh line) rather than running together in prose.
+  const nl2br = (s) => (s ?? "–").replace(/\n/g, "<br>");
   const rows = valuation.methods.map(m => `
     <tr>
       <td>
         <div class="field-label">${m.name}</div>
         <div class="field-text val-note-text">${m.assumptions || "Assumptions not yet defined."}</div>
       </td>
-      <td class="num">${m.year1 ?? "—"}</td>
-      <td class="num">${m.year3 ?? "—"}</td>
-      <td class="num">${m.year5 ?? "—"}</td>
+      <td class="num">${nl2br(m.year1)}</td>
+      <td class="num">${nl2br(m.year3)}</td>
+      <td class="num">${nl2br(m.year5)}</td>
     </tr>
   `).join("");
   return `
