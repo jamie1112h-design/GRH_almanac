@@ -217,13 +217,43 @@
     line-height: 1.55;
   }
 
+  .url-link {
+    display: inline-block;
+    text-decoration: none;
+    border-bottom: 1px dashed var(--gold);
+  }
+  .url-link:hover { color: var(--gold); }
+
+  .empty-state {
+    font-size: 13.5px;
+    color: var(--text-dim, #6B7280);
+    font-style: italic;
+    line-height: 1.55;
+  }
+
   /* Admin Mode (Decision 10) */
 
   .admin-bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 14px;
     margin: 18px 0 8px;
+  }
+
+  .opp-key {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .opp-key-pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .opp-key-label {
+    font-size: 12.5px;
+    color: var(--text-muted);
   }
 
   .password-modal-backdrop {
@@ -491,8 +521,28 @@
   Sort any column. Click an initiative to open its progress record.</p>
 
   <div class="admin-bar">
-    <button class="admin-toggle-btn" id="adminToggleBtn">Admin Mode: Off</button>
-    <span class="admin-status" id="adminStatusLabel" style="display:none;">Editing enabled — static fields edit in place, tracked fields log an update</span>
+    <div>
+      <button class="admin-toggle-btn" id="adminToggleBtn">Admin Mode: Off</button>
+      <span class="admin-status" id="adminStatusLabel" style="display:none;">Editing enabled – static fields edit in place, tracked fields log an update</span>
+    </div>
+    <div class="opp-key">
+      <div class="opp-key-pair">
+        <span class="status-pill" style="background:#6B9B6E;">Strong</span>
+        <span class="opp-key-label">Revenue Live</span>
+      </div>
+      <div class="opp-key-pair">
+        <span class="status-pill" style="background:#C9A227;">Ready</span>
+        <span class="opp-key-label">Pending Deploy</span>
+      </div>
+      <div class="opp-key-pair">
+        <span class="status-pill" style="background:#8A93A6;">Validated</span>
+        <span class="opp-key-label">Proof-of-Concept</span>
+      </div>
+      <div class="opp-key-pair">
+        <span class="status-pill" style="background:#5B6272;">Early Signal</span>
+        <span class="opp-key-label">Idea Stage</span>
+      </div>
+    </div>
   </div>
 
   <div class="table-shell">
@@ -688,7 +738,7 @@ function renderAttrField(item, attr, label, currentValue) {
     ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
   const formHtml = isOpen ? `
     <div class="admin-update-form">
-      <div class="field-label">Admin Update — ${label}</div>
+      <div class="field-label">Admin Update – ${label}</div>
       <div class="admin-update-note">This appends a new entry; it never overwrites the value above (Decision 2).</div>
       <input class="edit-input" id="attrval-${item.id}-${attr}" value="${String(currentValue).replace(/"/g, "&quot;")}">
       <input class="edit-input" id="attrnote-${item.id}-${attr}" placeholder="Optional note">
@@ -723,7 +773,7 @@ function renderOpportunityField(item) {
   ).join("");
   const formHtml = isOpen ? `
     <div class="admin-update-form">
-      <div class="field-label">Admin Update — Opportunity</div>
+      <div class="field-label">Admin Update – Opportunity</div>
       <div class="admin-update-note">This appends a new entry; it never overwrites the value above (Decision 2).</div>
       <select class="edit-input" id="attrsel-${item.id}-${attr}">${options}</select>
       <input class="edit-input" id="attrnote-${item.id}-${attr}" placeholder="Optional note">
@@ -741,6 +791,21 @@ function renderOpportunityField(item) {
       </div>
       <div class="field-text">${STATUS_META[item.opportunity].label}</div>
       ${formHtml}
+    </div>
+  `;
+}
+
+// Website URL -- prototype pass, graphic design only (Decision pending):
+// a real link when set, the same empty-state treatment used elsewhere
+// when it isn't. Not yet admin-editable in this pass.
+function renderUrlField(item) {
+  const hasUrl = item.url && item.url.trim();
+  return `
+    <div>
+      <div class="field-label">Website URL</div>
+      ${hasUrl
+        ? `<a class="field-text url-link" href="${item.url}" target="_blank" rel="noopener">${item.url}</a>`
+        : `<div class="empty-state">Not yet set.</div>`}
     </div>
   `;
 }
@@ -806,6 +871,7 @@ function render() {
         ${renderEditableField(item, "body.differentiation", "Differentiation", true)}
         ${renderAttrField(item, "frictionPoints", "Friction Points", item.body.frictionPoints)}
         ${renderEditableField(item, "body.nextDecision", "Next Decision Point", true)}
+        ${renderUrlField(item)}
         ${adminMode ? renderAttrField(item, "competitors", "Competitors", item.competitors) : ""}
         ${adminMode ? renderOpportunityField(item) : ""}
       </div>

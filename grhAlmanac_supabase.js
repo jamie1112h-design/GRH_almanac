@@ -98,6 +98,7 @@ async function loadInitiatives() {
     // this is the real updated_at timestamp, maintained automatically by
     // the version-bump trigger on every write (Decision 59).
     lastUpdated: new Date(r.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    url: r.url,
     body: {
       market: r.market,
       differentiation: r.differentiation,
