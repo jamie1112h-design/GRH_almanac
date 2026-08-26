@@ -4,10 +4,13 @@
 // already expect -- so no other rendering code needed to change.
 //
 // Also fetches the `valuations` table (via the `latest_valuations` view)
-// and groups it per initiative into { methods: [...] }, the exact shape
-// grhAlmanac_detail.html's renderValuationTable already expected but had
-// nothing to read until now. Initiatives with no valuation rows yet keep
-// falling through to the existing "Not yet modeled" empty state.
+// and groups it per initiative into { families: [ { family, methods: [...] } ] },
+// the two-level shape grhAlmanac_detail.html's renderValuationTable uses to
+// render a sub-header per product line (family) with its methods (Revenue
+// Projection, Revenue Multiple, DCF, Comparable Transactions) underneath,
+// ordered by the `sort_order` column rather than alphabetically. Initiatives
+// with no valuation rows yet keep falling through to the existing "Not yet
+// modeled" empty state.
 //
 // All writes route through SECURITY DEFINER functions (checkAdminPassword,
 // adminUpdateStaticField, adminInsertAttribute) that verify the admin
@@ -94,21 +97,35 @@ async function loadValuations() {
 
   const rows = await res.json();
 
-  // Group flat rows (one per method) by initiative_id into the
-  // { methods: [...] } shape grhAlmanac_detail.html's renderValuationTable
-  // already expects.
+  // Group flat rows into { families: [ { family, methods: [...] } ] } per
+  // initiative -- a family (e.g. "Consumer Descent") holds several methods
+  // (Revenue Projection, Revenue Multiple, DCF, Comparable Transactions),
+  // each rendered under a shared sub-header on the detail page. Rows within
+  // a family are ordered by sort_order, not alphabetically or by edit time.
   const byInitiative = {};
   for (const r of rows) {
     if (!byInitiative[r.initiative_id]) {
-      byInitiative[r.initiative_id] = { methods: [] };
+      byInitiative[r.initiative_id] = { families: [] };
     }
-    byInitiative[r.initiative_id].methods.push({
+    const bucket = byInitiative[r.initiative_id];
+    let familyEntry = bucket.families.find(f => f.family === r.family);
+    if (!familyEntry) {
+      familyEntry = { family: r.family, methods: [] };
+      bucket.families.push(familyEntry);
+    }
+    familyEntry.methods.push({
       name: r.method_name,
       assumptions: r.assumptions,
       year1: r.year1,
       year3: r.year3,
       year5: r.year5,
+      sortOrder: r.sort_order,
     });
+  }
+  for (const initId in byInitiative) {
+    for (const familyEntry of byInitiative[initId].families) {
+      familyEntry.methods.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
   }
   return byInitiative;
 }
@@ -157,10 +174,10 @@ async function loadInitiatives() {
       marketingSummary: r.marketing_summary,
       competitiveLandscape: r.competitive_landscape,
     },
-    // Grouped from the `valuations` table (via latest_valuations) above.
-    // Initiatives with no rows yet simply have no key here, so the
-    // existing "Not yet modeled" fallback on the detail page still
-    // applies unchanged.
+    // Grouped from the `valuations` table (via latest_valuations) above,
+    // two levels deep: family -> methods. Initiatives with no rows yet
+    // simply have no key here, so the existing "Not yet modeled" fallback
+    // on the detail page still applies unchanged.
     valuation: valuationsByInitiative[r.id],
   }));
 }

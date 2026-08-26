@@ -221,6 +221,17 @@
 
   .val-note-text { max-width: 320px; }
 
+  .val-family-block + .val-family-block { margin-top: 28px; }
+  .val-family-header {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--gold);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+
   .not-found {
     margin-top: 60px;
     text-align: center;
@@ -285,7 +296,7 @@ function renderNotFound() {
 }
 
 function renderValuationTable(valuation) {
-  if (!valuation || !valuation.methods || valuation.methods.length === 0) {
+  if (!valuation || !valuation.families || valuation.families.length === 0) {
     return `<div class="empty-state">Not yet modeled – no valuation methods or assumptions have been logged for this initiative yet.</div>`;
   }
   // Converts a stored literal newline into a real line break -- used so a
@@ -293,30 +304,35 @@ function renderValuationTable(valuation) {
   // onto its own line (Jamie's convention: a new revenue/cost number
   // always starts a fresh line) rather than running together in prose.
   const nl2br = (s) => (s ?? "–").replace(/\n/g, "<br>");
-  const rows = valuation.methods.map(m => `
-    <tr>
-      <td>
-        <div class="field-label">${m.name}</div>
-        <div class="field-text val-note-text">${m.assumptions || "Assumptions not yet defined."}</div>
-      </td>
-      <td class="num">${nl2br(m.year1)}</td>
-      <td class="num">${nl2br(m.year3)}</td>
-      <td class="num">${nl2br(m.year5)}</td>
-    </tr>
-  `).join("");
-  return `
-    <table class="val-table">
-      <thead>
-        <tr>
-          <th>Method &amp; Assumptions</th>
-          <th class="num">Year 1</th>
-          <th class="num">Year 3</th>
-          <th class="num">Year 5</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+  return valuation.families.map(fam => {
+    const rows = fam.methods.map(m => `
+      <tr>
+        <td>
+          <div class="field-label">${m.name}</div>
+          <div class="field-text val-note-text">${m.assumptions || "Assumptions not yet defined."}</div>
+        </td>
+        <td class="num">${nl2br(m.year1)}</td>
+        <td class="num">${nl2br(m.year3)}</td>
+        <td class="num">${nl2br(m.year5)}</td>
+      </tr>
+    `).join("");
+    return `
+      <div class="val-family-block">
+        <div class="val-family-header">${fam.family}</div>
+        <table class="val-table">
+          <thead>
+            <tr>
+              <th>Method &amp; Assumptions</th>
+              <th class="num">Year 1</th>
+              <th class="num">Year 3</th>
+              <th class="num">Year 5</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
 }
 
 function render() {
@@ -379,7 +395,7 @@ function render() {
 
     <div class="panel">
       <div class="panel-title">Valuations Forecasting</div>
-      <p class="panel-note">By method and assumptions, projected across Year 1, Year 3, and Year 5.</p>
+      <p class="panel-note">Grouped by product line, with each valuation method's assumptions projected across Year 1, Year 3, and Year 5.</p>
       ${renderValuationTable(item.valuation)}
     </div>
   `;
