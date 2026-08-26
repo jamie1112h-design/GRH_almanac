@@ -618,6 +618,7 @@ const STATIC_FIELD_MAP = {
   "body.market": "market",
   "body.differentiation": "differentiation",
   "body.nextDecision": "next_decision",
+  "manualRank": "manual_rank",
 };
 const ATTR_TABLE_MAP = {
   "buildStatus": "build_status",
@@ -828,7 +829,42 @@ function sortedData() {
     if (av > bv) return sortDir === "asc" ? 1 : -1;
     return 0;
   });
-  return rows;
+
+  // Manual row-order pins (admin-editable manualRank) supersede the
+  // sort above for whichever rows have one set -- everything else
+  // keeps flowing in the normal sorted order around them. A row with
+  // no manualRank, or an invalid one (out of range, or a duplicate of
+  // another row's claimed slot), just falls back into the normal flow.
+  const n = rows.length;
+  const claimedSlots = new Map(); // position -> item
+  const unpinnedQueue = [];
+  const seenSlots = new Set();
+
+  for (const item of rows) {
+    const r = item.manualRank;
+    const isValid = Number.isInteger(r) && r >= 1 && r <= n && !seenSlots.has(r);
+    if (isValid) {
+      claimedSlots.set(r, item);
+      seenSlots.add(r);
+    } else {
+      if (r !== null && r !== undefined && !isValid) {
+        console.warn(`Ignoring invalid/duplicate manualRank ${r} for "${item.name}" -- falling back to auto sort.`);
+      }
+      unpinnedQueue.push(item);
+    }
+  }
+
+  const result = [];
+  let nextUnpinned = 0;
+  for (let pos = 1; pos <= n; pos++) {
+    if (claimedSlots.has(pos)) {
+      result.push(claimedSlots.get(pos));
+    } else {
+      result.push(unpinnedQueue[nextUnpinned]);
+      nextUnpinned++;
+    }
+  }
+  return result;
 }
 
 function render() {
@@ -874,6 +910,7 @@ function render() {
         ${renderUrlField(item)}
         ${adminMode ? renderAttrField(item, "competitors", "Competitors", item.competitors) : ""}
         ${adminMode ? renderOpportunityField(item) : ""}
+        ${adminMode ? renderEditableField(item, "manualRank", "Manual Row Position (Admin Only — blank resumes automatic sort)", false) : ""}
       </div>
       <div class="record-actions">
         <a class="full-record-btn" href="grhAlmanac_detail.html?id=${item.id}">View the Full Initiative Record <span class="arrow-right">→</span></a>

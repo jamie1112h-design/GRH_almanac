@@ -99,6 +99,7 @@ async function loadInitiatives() {
     // the version-bump trigger on every write (Decision 59).
     lastUpdated: new Date(r.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     url: r.url,
+    manualRank: r.manual_rank,
     body: {
       market: r.market,
       differentiation: r.differentiation,
