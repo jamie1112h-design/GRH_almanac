@@ -232,6 +232,156 @@
     margin-bottom: 10px;
   }
 
+  /* Admin Mode (Decision 10 pattern, reused from grhAlmanac_index.html) */
+
+  .password-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .password-modal {
+    background: var(--surface);
+    border: 1px solid #C97D60;
+    border-radius: 8px;
+    padding: 24px 26px;
+    width: 320px;
+    max-width: 90vw;
+  }
+  .pw-modal-error {
+    font-size: 12px;
+    color: #C97D60;
+    margin: -6px 0 10px;
+  }
+
+  .admin-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .admin-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 1px solid #8A93A6;
+    color: #8A93A6;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .admin-toggle-btn:hover { border-color: #C97D60; color: #C97D60; }
+  .admin-toggle-btn.on {
+    background: #C97D60;
+    border-color: #C97D60;
+    color: var(--bg);
+  }
+
+  .admin-status {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: #C97D60;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .editable-field {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    transition: background 0.12s;
+  }
+  body.admin-mode .editable-field:hover {
+    background: rgba(201, 162, 39, 0.12);
+    outline: 1px dashed var(--gold);
+  }
+  body.admin-mode .editable-field::after {
+    content: " ✎";
+    color: var(--gold);
+    font-size: 11px;
+    opacity: 0.7;
+  }
+
+  .edit-textarea, .edit-input {
+    width: 100%;
+    max-width: 480px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-primary);
+    background: var(--surface-alt);
+    border: 1px solid var(--gold);
+    border-radius: 5px;
+    padding: 8px 10px;
+    resize: vertical;
+  }
+
+  .edit-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .edit-save-btn, .edit-cancel-btn {
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 6px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid var(--gold);
+  }
+  .edit-save-btn { background: var(--gold); color: var(--bg); }
+  .edit-cancel-btn { background: none; color: var(--text-muted); border-color: var(--border); }
+
+  .admin-update-form {
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: rgba(201, 125, 96, 0.08);
+    border: 1px solid #C97D60;
+    border-radius: 6px;
+    max-width: 620px;
+  }
+  .admin-update-form .field-label { color: #C97D60; margin-bottom: 6px; }
+  .admin-update-form .edit-input, .admin-update-form .edit-textarea { margin-bottom: 8px; }
+  .admin-update-note {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .add-method-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #C97D60;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 14px;
+  }
+  .add-method-trigger:hover { text-decoration: underline; }
+
+  .val-form-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .val-form-row .edit-input { max-width: 140px; }
+  .val-form-row .edit-input.wide { max-width: 280px; }
+
   .not-found {
     margin-top: 60px;
     text-align: center;
@@ -270,8 +420,24 @@
 </style>
 </head>
 <body>
+<div class="password-modal-backdrop" id="pwModalBackdrop" style="display:none;">
+  <div class="password-modal">
+    <div class="field-label" style="color:#C97D60;">Admin Access</div>
+    <p class="admin-update-note" style="margin-bottom:14px;">Enter the admin password to enable editing.</p>
+    <input type="password" class="edit-input" id="pwModalInput" placeholder="Password" autocomplete="off">
+    <div class="pw-modal-error" id="pwModalError" style="display:none;">Incorrect password.</div>
+    <div class="edit-actions">
+      <button class="edit-save-btn" id="pwModalSubmit">Unlock</button>
+      <button class="edit-cancel-btn" id="pwModalCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="wrap" id="wrap">
   <a class="back-link" href="index.html">← Back to Almanac</a>
+  <div class="admin-bar">
+    <button class="admin-toggle-btn" id="adminToggleBtn">Admin Mode: Off</button>
+    <span class="admin-status" id="adminStatusLabel" style="display:none;">Editing enabled – mockup only, not yet wired to Supabase</span>
+  </div>
   <div class="eyebrow" id="updatedOn">Updated on</div>
   <div id="content"></div>
   <a class="back-link back-link-bottom" href="index.html">← Back to Almanac</a>
@@ -291,6 +457,156 @@ function renderNotFound() {
   contentEl.innerHTML = `
     <div class="not-found">
       <a class="full-record-btn" href="index.html">Page is Not Populated Yet – Return to Front Page <span class="arrow-right">→</span></a>
+    </div>
+  `;
+}
+
+/* Admin Mode -- HTML/interaction mockup only, matching grhAlmanac_index.html's
+   Decision 10 pattern. Nothing here writes to Supabase yet: Save/Add Method
+   update the in-memory `item` only and re-render, so the visual/interaction
+   design can be reviewed before real write-wiring (the still-pending
+   admin_update_static_field extension and the new admin_insert_valuation
+   sibling function). */
+let adminMode = false;
+let adminPassword = null;
+let editingField = null;      // path string of the field currently being edited, or null
+let addingMethodFor = null;   // family name whose "Add Method" form is open, or null
+
+// Detail-page-only static fields (admin_update_static_field doesn't cover
+// these yet).
+const DETAIL_FIELD_LABELS = {
+  "body.valueProposition": "Value Proposition",
+  "body.mvpDescription": "Minimum Viable Product Description",
+  "body.productEnhancements": "Slated Product Line Enhancements",
+  "body.marketingSummary": "Marketing Summary",
+  "body.competitiveLandscape": "Competitive Landscape",
+};
+
+function getField(obj, path) {
+  return path.split(".").reduce((o, k) => (o ? o[k] : undefined), obj);
+}
+function setField(obj, path, value) {
+  const parts = path.split(".");
+  let o = obj;
+  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+  o[parts[parts.length - 1]] = value;
+}
+
+function enableAdminMode() {
+  adminMode = true;
+  document.body.classList.add("admin-mode");
+  document.getElementById("adminToggleBtn").classList.add("on");
+  document.getElementById("adminToggleBtn").textContent = "Admin Mode: On";
+  document.getElementById("adminStatusLabel").style.display = "inline";
+  render();
+}
+function disableAdminMode() {
+  adminMode = false;
+  adminPassword = null;
+  editingField = null;
+  addingMethodFor = null;
+  document.body.classList.remove("admin-mode");
+  document.getElementById("adminToggleBtn").classList.remove("on");
+  document.getElementById("adminToggleBtn").textContent = "Admin Mode: Off";
+  document.getElementById("adminStatusLabel").style.display = "none";
+  render();
+}
+function showPasswordModal() {
+  document.getElementById("pwModalError").style.display = "none";
+  document.getElementById("pwModalInput").value = "";
+  document.getElementById("pwModalBackdrop").style.display = "flex";
+  document.getElementById("pwModalInput").focus();
+}
+function hidePasswordModal() {
+  document.getElementById("pwModalBackdrop").style.display = "none";
+}
+async function submitPasswordModal() {
+  const input = document.getElementById("pwModalInput").value;
+  const errEl = document.getElementById("pwModalError");
+  const submitBtn = document.getElementById("pwModalSubmit");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Checking…";
+  try {
+    const ok = await checkAdminPassword(input);
+    if (ok) {
+      adminPassword = input;
+      hidePasswordModal();
+      enableAdminMode();
+    } else {
+      errEl.textContent = "Incorrect password.";
+      errEl.style.display = "block";
+      document.getElementById("pwModalInput").value = "";
+      document.getElementById("pwModalInput").focus();
+    }
+  } catch (err) {
+    errEl.textContent = "Couldn't reach the server to check the password.";
+    errEl.style.display = "block";
+    console.error(err);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Unlock";
+  }
+}
+document.getElementById("adminToggleBtn").addEventListener("click", () => {
+  if (adminMode) disableAdminMode(); else showPasswordModal();
+});
+document.getElementById("pwModalSubmit").addEventListener("click", submitPasswordModal);
+document.getElementById("pwModalCancel").addEventListener("click", hidePasswordModal);
+document.getElementById("pwModalInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitPasswordModal();
+});
+
+// Same edit-in-place pattern as index.html's renderEditableField, applied
+// to the five detail-page-only fields. Save is a local mock -- it does not
+// call adminUpdateStaticField, since that function doesn't know these
+// fields yet.
+function renderEditableField(path, label, currentValue) {
+  const isEditing = editingField === path;
+  const value = currentValue || "";
+  if (isEditing) {
+    return `
+      <div class="field-block">
+        <div class="field-label">${label}</div>
+        <textarea class="edit-textarea" id="editbox-${path}" rows="4">${value}</textarea>
+        <div class="edit-actions">
+          <button class="edit-save-btn" data-save-field="${path}">Save</button>
+          <button class="edit-cancel-btn" data-cancel-field="1">Cancel</button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="field-block">
+      <div class="field-label">${label}</div>
+      <div class="field-text editable-field" data-edit-field="${path}">${value || "Not yet assessed – no analysis has been logged for this initiative yet."}</div>
+    </div>
+  `;
+}
+
+// Mock "Add Valuation Method" form, one per family -- appends to that
+// family's in-memory methods array only. Real wiring is a new sibling
+// function to admin_insert_attribute (admin_insert_valuation), not yet built.
+function renderAddMethodForm(familyName) {
+  const isOpen = addingMethodFor === familyName;
+  const safeFamily = familyName.replace(/[^a-zA-Z0-9]/g, "_");
+  if (!isOpen) {
+    return `<div class="add-method-trigger" data-open-add-method="${familyName}">+ Add Valuation Method</div>`;
+  }
+  return `
+    <div class="admin-update-form">
+      <div class="field-label">Add Valuation Method – ${familyName}</div>
+      <div class="admin-update-note">Appends a new method row to this family; existing rows are untouched.</div>
+      <input class="edit-input wide" id="newMethodName-${safeFamily}" placeholder="Method name (e.g. Revenue Multiple Company Valuation)">
+      <textarea class="edit-textarea" id="newMethodAssumptions-${safeFamily}" rows="2" placeholder="Assumptions"></textarea>
+      <div class="val-form-row">
+        <input class="edit-input" id="newMethodYear1-${safeFamily}" placeholder="Year 1">
+        <input class="edit-input" id="newMethodYear3-${safeFamily}" placeholder="Year 3">
+        <input class="edit-input" id="newMethodYear5-${safeFamily}" placeholder="Year 5">
+      </div>
+      <div class="edit-actions">
+        <button class="edit-save-btn" data-save-new-method="${familyName}">Save Method</button>
+        <button class="edit-cancel-btn" data-cancel-new-method="1">Cancel</button>
+      </div>
     </div>
   `;
 }
@@ -330,6 +646,7 @@ function renderValuationTable(valuation) {
           </thead>
           <tbody>${rows}</tbody>
         </table>
+        ${adminMode ? renderAddMethodForm(fam.family) : ""}
       </div>
     `;
   }).join("");
@@ -357,32 +674,24 @@ function render() {
     <div class="panel">
       <div class="panel-title">Market Assessment</div>
       <p class="panel-note">Value proposition, product scope, and marketing positioning for this initiative.</p>
+      ${adminMode ? renderEditableField("body.valueProposition", "Value Proposition", item.body.valueProposition)
+                  : `<div class="field-block"><div class="field-label">Value Proposition</div><div class="field-text">${field(item.body.valueProposition)}</div></div>`}
+      ${adminMode ? renderEditableField("body.mvpDescription", "Minimum Viable Product Description", item.body.mvpDescription)
+                  : `<div class="field-block"><div class="field-label">Minimum Viable Product Description</div><div class="field-text">${field(item.body.mvpDescription)}</div></div>`}
+      ${adminMode ? renderEditableField("body.productEnhancements", "Slated Product Line Enhancements", item.body.productEnhancements)
+                  : `<div class="field-block"><div class="field-label">Slated Product Line Enhancements</div><div class="field-text">${field(item.body.productEnhancements)}</div></div>`}
       <div class="field-block">
-        <div class="field-label">Value Proposition</div>
-        <div class="field-text">${field(item.body.valueProposition)}</div>
-      </div>
-      <div class="field-block">
-        <div class="field-label">Minimum Viable Product Description</div>
-        <div class="field-text">${field(item.body.mvpDescription)}</div>
-      </div>
-      <div class="field-block">
-        <div class="field-label">Slated Product Line Enhancements</div>
-        <div class="field-text">${field(item.body.productEnhancements)}</div>
-      </div>
-      <div class="field-block">
-        <div class="field-label">Marketing Summary</div>
         <div class="field-note">Touching on the 7 P's of Marketing – Product, Price, Place, Promotion, People, Process, Physical Evidence.</div>
-        <div class="field-text">${field(item.body.marketingSummary)}</div>
+        ${adminMode ? renderEditableField("body.marketingSummary", "Marketing Summary", item.body.marketingSummary)
+                    : `<div class="field-label">Marketing Summary</div><div class="field-text">${field(item.body.marketingSummary)}</div>`}
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-title">Competitor Positioning</div>
       <p class="panel-note">Landscape, strongest direct competitors, and differentiation for this initiative.</p>
-      <div class="field-block">
-        <div class="field-label">Competitive Landscape</div>
-        <div class="field-text">${field(item.body.competitiveLandscape)}</div>
-      </div>
+      ${adminMode ? renderEditableField("body.competitiveLandscape", "Competitive Landscape", item.body.competitiveLandscape)
+                  : `<div class="field-block"><div class="field-label">Competitive Landscape</div><div class="field-text">${field(item.body.competitiveLandscape)}</div></div>`}
       <div class="field-block">
         <div class="field-label">Strongest Direct Competitors</div>
         <div class="field-text">${field(item.competitors)}</div>
@@ -399,6 +708,86 @@ function render() {
       ${renderValuationTable(item.valuation)}
     </div>
   `;
+
+  if (adminMode) bindAdminHandlers();
+}
+
+// Event delegation re-bound after every render(), same defensive pattern as
+// index.html: re-checks adminMode at click time rather than trusting CSS
+// alone to hide the affordance.
+function bindAdminHandlers() {
+  contentEl.querySelectorAll("[data-edit-field]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      editingField = el.dataset.editField;
+      addingMethodFor = null;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-save-field]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      const path = el.dataset.saveField;
+      const box = document.getElementById(`editbox-${path}`);
+      // Mock save: updates the in-memory item only. Real wiring needs
+      // admin_update_static_field extended with this field first.
+      setField(item, path, box.value);
+      editingField = null;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-cancel-field]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      editingField = null;
+      render();
+    });
+  });
+
+  contentEl.querySelectorAll("[data-open-add-method]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      addingMethodFor = el.dataset.openAddMethod;
+      editingField = null;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-cancel-new-method]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      addingMethodFor = null;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-save-new-method]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      const familyName = el.dataset.saveNewMethod;
+      const safeFamily = familyName.replace(/[^a-zA-Z0-9]/g, "_");
+      const name = document.getElementById(`newMethodName-${safeFamily}`).value;
+      if (!name) return;
+      // Mock save: appends locally only. Real wiring is a new sibling
+      // function to admin_insert_attribute (admin_insert_valuation), not
+      // yet built.
+      const familyEntry = item.valuation.families.find(f => f.family === familyName);
+      familyEntry.methods.push({
+        name,
+        assumptions: document.getElementById(`newMethodAssumptions-${safeFamily}`).value,
+        year1: document.getElementById(`newMethodYear1-${safeFamily}`).value,
+        year3: document.getElementById(`newMethodYear3-${safeFamily}`).value,
+        year5: document.getElementById(`newMethodYear5-${safeFamily}`).value,
+        sortOrder: familyEntry.methods.length + 1,
+      });
+      addingMethodFor = null;
+      render();
+    });
+  });
 }
 
 (async () => {
