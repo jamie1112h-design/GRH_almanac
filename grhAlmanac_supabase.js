@@ -3,12 +3,22 @@
 // DATA array shape grhAlmanac_index.html and grhAlmanac_detail.html
 // already expect -- so no other rendering code needed to change.
 //
+// Also fetches the `valuations` table (via the `latest_valuations` view)
+// and groups it per initiative into { methods: [...] }, the exact shape
+// grhAlmanac_detail.html's renderValuationTable already expected but had
+// nothing to read until now. Initiatives with no valuation rows yet keep
+// falling through to the existing "Not yet modeled" empty state.
+//
 // All writes route through SECURITY DEFINER functions (checkAdminPassword,
 // adminUpdateStaticField, adminInsertAttribute) that verify the admin
 // password server-side before touching any table. This key can never
 // read or write any table directly -- RLS default-denies the public
 // role on every table; these three functions are the only doorway
-// (Decisions 61, 67, 69).
+// (Decisions 61, 67, 69). The `valuations` table follows the same
+// public-read/no-public-write RLS pattern as the other attribute tables;
+// admin write-wiring for it (mirroring adminInsertAttribute) is not yet
+// built -- new/edited valuation rows go in directly via SQL for now,
+// the same as this initial population.
 
 const SUPABASE_URL = "https://hwcrapebwttyhvwsymbr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_qg-YWKvSI21k8AnTfRxNEQ_qGmLw_nq";
@@ -67,9 +77,9 @@ async function adminInsertAttribute(password, initiativeId, attrTable, value, no
   });
 }
 
-async function loadInitiatives() {
+async function loadValuations() {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/initiative_records?select=*`,
+    `${SUPABASE_URL}/rest/v1/latest_valuations?select=*`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -83,6 +93,42 @@ async function loadInitiatives() {
   }
 
   const rows = await res.json();
+
+  // Group flat rows (one per method) by initiative_id into the
+  // { methods: [...] } shape grhAlmanac_detail.html's renderValuationTable
+  // already expects.
+  const byInitiative = {};
+  for (const r of rows) {
+    if (!byInitiative[r.initiative_id]) {
+      byInitiative[r.initiative_id] = { methods: [] };
+    }
+    byInitiative[r.initiative_id].methods.push({
+      name: r.method_name,
+      assumptions: r.assumptions,
+      year1: r.year1,
+      year3: r.year3,
+      year5: r.year5,
+    });
+  }
+  return byInitiative;
+}
+
+async function loadInitiatives() {
+  const [initiativesRes, valuationsByInitiative] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/initiative_records?select=*`, {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    }),
+    loadValuations(),
+  ]);
+
+  if (!initiativesRes.ok) {
+    throw new Error(`Supabase fetch failed: ${initiativesRes.status} ${initiativesRes.statusText}`);
+  }
+
+  const rows = await initiativesRes.json();
 
   return rows.map((r) => ({
     id: r.id,
@@ -111,7 +157,10 @@ async function loadInitiatives() {
       marketingSummary: r.marketing_summary,
       competitiveLandscape: r.competitive_landscape,
     },
-    // No valuation data in Supabase yet -- omitted here so the existing
-    // "Not yet modeled" fallback on the detail page keeps working as-is.
+    // Grouped from the `valuations` table (via latest_valuations) above.
+    // Initiatives with no rows yet simply have no key here, so the
+    // existing "Not yet modeled" fallback on the detail page still
+    // applies unchanged.
+    valuation: valuationsByInitiative[r.id],
   }));
 }
