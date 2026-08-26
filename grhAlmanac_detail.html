@@ -294,6 +294,24 @@
     font-weight: 700;
   }
 
+  .attr-field {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .attr-update-trigger {
+    display: none;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #C97D60;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  body.admin-mode .attr-update-trigger { display: inline; }
+  .attr-update-trigger:hover { text-decoration: underline; }
+
   .editable-field {
     cursor: pointer;
     border-radius: 4px;
@@ -505,6 +523,7 @@ function disableAdminMode() {
   adminPassword = null;
   editingField = null;
   addingMethodFor = null;
+  updatingCompetitors = false;
   document.body.classList.remove("admin-mode");
   document.getElementById("adminToggleBtn").classList.remove("on");
   document.getElementById("adminToggleBtn").textContent = "Admin Mode: Off";
@@ -652,6 +671,46 @@ function renderValuationTable(valuation) {
   }).join("");
 }
 
+// Mock attribute-tracked field, matching index.html's renderAttrField
+// pattern (an "Update" trigger opening a small value+note form) rather than
+// the simple edit-in-place pattern above -- Competitors is backed by the
+// append-only `competitors` table, not a plain overwrite. Save is a local
+// mock only, same as everything else on this page; real wiring already
+// exists on the index page (adminInsertAttribute) and just needs the same
+// call added here.
+let updatingCompetitors = false;
+function renderCompetitorsField(currentValue) {
+  const value = currentValue || "";
+  if (updatingCompetitors) {
+    return `
+      <div class="field-block">
+        <div class="field-label attr-field">Strongest Direct Competitors
+          <span class="attr-update-trigger" data-open-competitors="1">Update →</span>
+        </div>
+        <div class="field-text">${value}</div>
+        <div class="admin-update-form">
+          <div class="field-label">Admin Update – Competitors</div>
+          <div class="admin-update-note">Appends a new entry; it never overwrites the value above.</div>
+          <textarea class="edit-textarea" id="competitorsNewValue" rows="2">${value}</textarea>
+          <input class="edit-input" id="competitorsNote" placeholder="Optional note">
+          <div class="edit-actions">
+            <button class="edit-save-btn" data-save-competitors="1">Save Update</button>
+            <button class="edit-cancel-btn" data-cancel-competitors="1">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="field-block">
+      <div class="field-label attr-field">Strongest Direct Competitors
+        <span class="attr-update-trigger" data-open-competitors="1">Update →</span>
+      </div>
+      <div class="field-text">${value}</div>
+    </div>
+  `;
+}
+
 function render() {
   if (!item) {
     renderNotFound();
@@ -669,7 +728,8 @@ function render() {
       <span class="status-pill" style="background:${status.color}">${status.label}</span>
     </div>
     <p class="entity-source">${entitySourceLine(item)}</p>
-    <p class="summary-text">${item.summary}</p>
+    ${adminMode ? renderEditableField("summary", "Summary Description", item.summary)
+                : `<p class="summary-text">${item.summary}</p>`}
 
     <div class="panel">
       <div class="panel-title">Market Assessment</div>
@@ -692,14 +752,10 @@ function render() {
       <p class="panel-note">Landscape, strongest direct competitors, and differentiation for this initiative.</p>
       ${adminMode ? renderEditableField("body.competitiveLandscape", "Competitive Landscape", item.body.competitiveLandscape)
                   : `<div class="field-block"><div class="field-label">Competitive Landscape</div><div class="field-text">${field(item.body.competitiveLandscape)}</div></div>`}
-      <div class="field-block">
-        <div class="field-label">Strongest Direct Competitors</div>
-        <div class="field-text">${field(item.competitors)}</div>
-      </div>
-      <div class="field-block">
-        <div class="field-label">Differentiation</div>
-        <div class="field-text">${field(item.body.differentiation)}</div>
-      </div>
+      ${adminMode ? renderCompetitorsField(item.competitors)
+                  : `<div class="field-block"><div class="field-label">Strongest Direct Competitors</div><div class="field-text">${field(item.competitors)}</div></div>`}
+      ${adminMode ? renderEditableField("body.differentiation", "Differentiation", item.body.differentiation)
+                  : `<div class="field-block"><div class="field-label">Differentiation</div><div class="field-text">${field(item.body.differentiation)}</div></div>`}
     </div>
 
     <div class="panel">
@@ -785,6 +841,38 @@ function bindAdminHandlers() {
         sortOrder: familyEntry.methods.length + 1,
       });
       addingMethodFor = null;
+      render();
+    });
+  });
+
+  contentEl.querySelectorAll("[data-open-competitors]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      updatingCompetitors = true;
+      editingField = null;
+      addingMethodFor = null;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-cancel-competitors]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      updatingCompetitors = false;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-save-competitors]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      // Mock save: overwrites the in-memory display value only. Real
+      // wiring already exists for this field on the index page
+      // (adminInsertAttribute, competitors table) and just needs the
+      // same call added here.
+      item.competitors = document.getElementById("competitorsNewValue").value;
+      updatingCompetitors = false;
       render();
     });
   });
