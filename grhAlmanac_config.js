@@ -8,9 +8,9 @@
 
 const STATUS_META = {
   strong:     { label: "Strong",       color: "#6B9B6E", score: 4 },
-  developing: { label: "Developing",   color: "#C9A227", score: 3 },
-  early:      { label: "Early Signal", color: "#8A93A6", score: 2 },
-  idea:       { label: "Idea Stage",   color: "#5B6272", score: 1 },
+  developing: { label: "Ready",        color: "#C9A227", score: 3 },
+  early:      { label: "Validated",    color: "#8A93A6", score: 2 },
+  idea:       { label: "Early Signal", color: "#5B6272", score: 1 },
 };
 
 const ENTITY_META = {
@@ -39,6 +39,6 @@ const CATEGORY_DESCRIPTORS = {
 function entitySourceLine(item) {
   const ent = ENTITY_META[item.entity];
   const desc = CATEGORY_DESCRIPTORS[item.category] || item.category;
-  return `${ent.full} – ${desc} (${ent.label})`;
+  return `${ent.full} – ${desc} <span class="entity-badge ${ent.cls}" title="${ent.full}">${ent.label}</span>`;
 }
 
