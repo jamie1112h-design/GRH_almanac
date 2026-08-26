@@ -482,33 +482,30 @@ function renderNotFound() {
 /* Admin Mode -- HTML/interaction mockup only, matching grhAlmanac_index.html's
    Decision 10 pattern. Nothing here writes to Supabase yet: Save/Add Method
    update the in-memory `item` only and re-render, so the visual/interaction
-   design can be reviewed before real write-wiring (the still-pending
-   admin_update_static_field extension and the new admin_insert_valuation
-   sibling function). */
+   design was reviewed before real write-wiring, which is now built: Save
+   and Add Method call the real adminUpdateStaticField / adminInsertAttribute
+   / adminInsertValuation functions (from grhAlmanac_supabase.js) and refetch
+   from Supabase afterward, same pattern as grhAlmanac_index.html. */
 let adminMode = false;
 let adminPassword = null;
 let editingField = null;      // path string of the field currently being edited, or null
 let addingMethodFor = null;   // family name whose "Add Method" form is open, or null
+let saveError = null;         // { key, message } -- key matches editingField/attr/family identity
 
-// Detail-page-only static fields (admin_update_static_field doesn't cover
-// these yet).
-const DETAIL_FIELD_LABELS = {
-  "body.valueProposition": "Value Proposition",
-  "body.mvpDescription": "Minimum Viable Product Description",
-  "body.productEnhancements": "Slated Product Line Enhancements",
-  "body.marketingSummary": "Marketing Summary",
-  "body.competitiveLandscape": "Competitive Landscape",
+// Maps the JS-side path used in the UI to the actual SQL field name
+// admin_update_static_field expects. Differentiation and Summary already
+// had backend support before this pass; the other five were added to
+// admin_update_static_field alongside this wiring.
+const STATIC_FIELD_MAP = {
+  "summary": "summary",
+  "body.differentiation": "differentiation",
+  "body.valueProposition": "value_proposition",
+  "body.mvpDescription": "mvp_description",
+  "body.productEnhancements": "product_enhancements",
+  "body.marketingSummary": "marketing_summary",
+  "body.competitiveLandscape": "competitive_landscape",
 };
 
-function getField(obj, path) {
-  return path.split(".").reduce((o, k) => (o ? o[k] : undefined), obj);
-}
-function setField(obj, path, value) {
-  const parts = path.split(".");
-  let o = obj;
-  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
-  o[parts[parts.length - 1]] = value;
-}
 
 function enableAdminMode() {
   adminMode = true;
@@ -583,10 +580,13 @@ function renderEditableField(path, label, currentValue) {
   const isEditing = editingField === path;
   const value = currentValue || "";
   if (isEditing) {
+    const errHtml = (saveError && saveError.key === path)
+      ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
     return `
       <div class="field-block">
         <div class="field-label">${label}</div>
         <textarea class="edit-textarea" id="editbox-${path}" rows="4">${value}</textarea>
+        ${errHtml}
         <div class="edit-actions">
           <button class="edit-save-btn" data-save-field="${path}">Save</button>
           <button class="edit-cancel-btn" data-cancel-field="1">Cancel</button>
@@ -602,15 +602,16 @@ function renderEditableField(path, label, currentValue) {
   `;
 }
 
-// Mock "Add Valuation Method" form, one per family -- appends to that
-// family's in-memory methods array only. Real wiring is a new sibling
-// function to admin_insert_attribute (admin_insert_valuation), not yet built.
+// "Add Valuation Method" form, one per family -- calls the real
+// adminInsertValuation function and refetches on success.
 function renderAddMethodForm(familyName) {
   const isOpen = addingMethodFor === familyName;
   const safeFamily = familyName.replace(/[^a-zA-Z0-9]/g, "_");
   if (!isOpen) {
     return `<div class="add-method-trigger" data-open-add-method="${familyName}">+ Add Valuation Method</div>`;
   }
+  const errHtml = (saveError && saveError.key === `family|${familyName}`)
+    ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
   return `
     <div class="admin-update-form">
       <div class="field-label">Add Valuation Method – ${familyName}</div>
@@ -622,6 +623,7 @@ function renderAddMethodForm(familyName) {
         <input class="edit-input" id="newMethodYear3-${safeFamily}" placeholder="Year 3">
         <input class="edit-input" id="newMethodYear5-${safeFamily}" placeholder="Year 5">
       </div>
+      ${errHtml}
       <div class="edit-actions">
         <button class="edit-save-btn" data-save-new-method="${familyName}">Save Method</button>
         <button class="edit-cancel-btn" data-cancel-new-method="1">Cancel</button>
@@ -671,17 +673,17 @@ function renderValuationTable(valuation) {
   }).join("");
 }
 
-// Mock attribute-tracked field, matching index.html's renderAttrField
-// pattern (an "Update" trigger opening a small value+note form) rather than
-// the simple edit-in-place pattern above -- Competitors is backed by the
-// append-only `competitors` table, not a plain overwrite. Save is a local
-// mock only, same as everything else on this page; real wiring already
-// exists on the index page (adminInsertAttribute) and just needs the same
-// call added here.
+// Attribute-tracked field, matching index.html's renderAttrField pattern
+// (an "Update" trigger opening a small value+note form) rather than the
+// simple edit-in-place pattern above -- Competitors is backed by the
+// append-only `competitors` table, not a plain overwrite. Calls the real
+// adminInsertAttribute function and refetches on success.
 let updatingCompetitors = false;
 function renderCompetitorsField(currentValue) {
   const value = currentValue || "";
   if (updatingCompetitors) {
+    const errHtml = (saveError && saveError.key === "competitors")
+      ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
     return `
       <div class="field-block">
         <div class="field-label attr-field">Strongest Direct Competitors
@@ -693,6 +695,7 @@ function renderCompetitorsField(currentValue) {
           <div class="admin-update-note">Appends a new entry; it never overwrites the value above.</div>
           <textarea class="edit-textarea" id="competitorsNewValue" rows="2">${value}</textarea>
           <input class="edit-input" id="competitorsNote" placeholder="Optional note">
+          ${errHtml}
           <div class="edit-actions">
             <button class="edit-save-btn" data-save-competitors="1">Save Update</button>
             <button class="edit-cancel-btn" data-cancel-competitors="1">Cancel</button>
@@ -782,15 +785,27 @@ function bindAdminHandlers() {
     });
   });
   contentEl.querySelectorAll("[data-save-field]").forEach(el => {
-    el.addEventListener("click", (e) => {
+    el.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (!adminMode) return;
       const path = el.dataset.saveField;
       const box = document.getElementById(`editbox-${path}`);
-      // Mock save: updates the in-memory item only. Real wiring needs
-      // admin_update_static_field extended with this field first.
-      setField(item, path, box.value);
-      editingField = null;
+      const newValue = box.value;
+      const sqlField = STATIC_FIELD_MAP[path];
+      el.disabled = true;
+      el.textContent = "Saving…";
+      try {
+        const ok = await adminUpdateStaticField(adminPassword, item.id, sqlField, newValue, item.version);
+        if (ok) {
+          await refetchItem();
+          editingField = null;
+          saveError = null;
+        } else {
+          saveError = { key: path, message: "This was edited elsewhere since you loaded the page. Reload to see the latest version before saving." };
+        }
+      } catch (err) {
+        saveError = { key: path, message: err.message || "Save failed." };
+      }
       render();
     });
   });
@@ -799,6 +814,7 @@ function bindAdminHandlers() {
       e.stopPropagation();
       if (!adminMode) return;
       editingField = null;
+      saveError = null;
       render();
     });
   });
@@ -809,6 +825,7 @@ function bindAdminHandlers() {
       if (!adminMode) return;
       addingMethodFor = el.dataset.openAddMethod;
       editingField = null;
+      saveError = null;
       render();
     });
   });
@@ -817,30 +834,37 @@ function bindAdminHandlers() {
       e.stopPropagation();
       if (!adminMode) return;
       addingMethodFor = null;
+      saveError = null;
       render();
     });
   });
   contentEl.querySelectorAll("[data-save-new-method]").forEach(el => {
-    el.addEventListener("click", (e) => {
+    el.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (!adminMode) return;
       const familyName = el.dataset.saveNewMethod;
       const safeFamily = familyName.replace(/[^a-zA-Z0-9]/g, "_");
       const name = document.getElementById(`newMethodName-${safeFamily}`).value;
-      if (!name) return;
-      // Mock save: appends locally only. Real wiring is a new sibling
-      // function to admin_insert_attribute (admin_insert_valuation), not
-      // yet built.
-      const familyEntry = item.valuation.families.find(f => f.family === familyName);
-      familyEntry.methods.push({
-        name,
-        assumptions: document.getElementById(`newMethodAssumptions-${safeFamily}`).value,
-        year1: document.getElementById(`newMethodYear1-${safeFamily}`).value,
-        year3: document.getElementById(`newMethodYear3-${safeFamily}`).value,
-        year5: document.getElementById(`newMethodYear5-${safeFamily}`).value,
-        sortOrder: familyEntry.methods.length + 1,
-      });
-      addingMethodFor = null;
+      const errKey = `family|${familyName}`;
+      if (!name) {
+        saveError = { key: errKey, message: "Method name is required." };
+        render();
+        return;
+      }
+      const assumptions = document.getElementById(`newMethodAssumptions-${safeFamily}`).value;
+      const year1 = document.getElementById(`newMethodYear1-${safeFamily}`).value;
+      const year3 = document.getElementById(`newMethodYear3-${safeFamily}`).value;
+      const year5 = document.getElementById(`newMethodYear5-${safeFamily}`).value;
+      el.disabled = true;
+      el.textContent = "Saving…";
+      try {
+        await adminInsertValuation(adminPassword, item.id, familyName, name, assumptions, year1, year3, year5);
+        await refetchItem();
+        addingMethodFor = null;
+        saveError = null;
+      } catch (err) {
+        saveError = { key: errKey, message: err.message || "Save failed." };
+      }
       render();
     });
   });
@@ -852,6 +876,7 @@ function bindAdminHandlers() {
       updatingCompetitors = true;
       editingField = null;
       addingMethodFor = null;
+      saveError = null;
       render();
     });
   });
@@ -860,28 +885,40 @@ function bindAdminHandlers() {
       e.stopPropagation();
       if (!adminMode) return;
       updatingCompetitors = false;
+      saveError = null;
       render();
     });
   });
   contentEl.querySelectorAll("[data-save-competitors]").forEach(el => {
-    el.addEventListener("click", (e) => {
+    el.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (!adminMode) return;
-      // Mock save: overwrites the in-memory display value only. Real
-      // wiring already exists for this field on the index page
-      // (adminInsertAttribute, competitors table) and just needs the
-      // same call added here.
-      item.competitors = document.getElementById("competitorsNewValue").value;
-      updatingCompetitors = false;
+      const newVal = document.getElementById("competitorsNewValue").value;
+      const note = document.getElementById("competitorsNote").value;
+      el.disabled = true;
+      el.textContent = "Saving…";
+      try {
+        await adminInsertAttribute(adminPassword, item.id, "competitors", newVal, note || null);
+        await refetchItem();
+        updatingCompetitors = false;
+        saveError = null;
+      } catch (err) {
+        saveError = { key: "competitors", message: err.message || "Save failed." };
+      }
       render();
     });
   });
 }
 
+async function refetchItem() {
+  const DATA = await loadInitiatives();
+  item = DATA.find(d => d.id === id);
+  return item;
+}
+
 (async () => {
   try {
-    const DATA = await loadInitiatives();
-    item = DATA.find(d => d.id === id);
+    await refetchItem();
     render();
   } catch (err) {
     contentEl.innerHTML = `

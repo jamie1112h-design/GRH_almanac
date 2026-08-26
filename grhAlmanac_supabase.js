@@ -19,9 +19,9 @@
 // role on every table; these three functions are the only doorway
 // (Decisions 61, 67, 69). The `valuations` table follows the same
 // public-read/no-public-write RLS pattern as the other attribute tables;
-// admin write-wiring for it (mirroring adminInsertAttribute) is not yet
-// built -- new/edited valuation rows go in directly via SQL for now,
-// the same as this initial population.
+// admin_insert_valuation is its write path, mirroring admin_insert_attribute
+// but accepting a full method (name, assumptions, year1/3/5) in one call
+// since those five parts must save together.
 
 const SUPABASE_URL = "https://hwcrapebwttyhvwsymbr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_qg-YWKvSI21k8AnTfRxNEQ_qGmLw_nq";
@@ -77,6 +77,23 @@ async function adminInsertAttribute(password, initiativeId, attrTable, value, no
     p_attr_table: attrTable,
     p_value: value,
     p_note: note || null,
+  });
+}
+
+// Valuation methods (Revenue Multiple, DCF, etc.): always a new row within
+// a family, never an overwrite -- same append-only spirit as
+// adminInsertAttribute, but a method is five parts saved together rather
+// than one value, so it gets its own RPC rather than reusing that shape.
+async function adminInsertValuation(password, initiativeId, family, methodName, assumptions, year1, year3, year5) {
+  return callRpc("admin_insert_valuation", {
+    input_password: password,
+    p_initiative_id: initiativeId,
+    p_family: family,
+    p_method_name: methodName,
+    p_assumptions: assumptions || null,
+    p_year1: year1 || null,
+    p_year3: year3 || null,
+    p_year5: year5 || null,
   });
 }
 
