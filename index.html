@@ -104,7 +104,7 @@
   .col-name    { width: 19%; min-width: 0; overflow-wrap: break-word; }
   .col-entity  { width: 9%;  flex-shrink: 0; }
   .col-cat     { width: 11%; min-width: 0; overflow-wrap: break-word; }
-  .col-build   { width: 17%; min-width: 0; overflow-wrap: break-word; }
+  .col-summary { width: 17%; min-width: 0; overflow-wrap: break-word; }
   .col-opp     { width: 11%; flex-shrink: 0; text-align: center; }
   .col-comp    { width: 21%; min-width: 0; overflow-wrap: break-word; }
   .col-updated { width: 8%; text-align: right; flex-shrink: 0; }
@@ -551,7 +551,7 @@
       <button class="th col-name" data-key="name">Initiative<span class="arrow">↕</span></button>
       <button class="th col-entity" data-key="entity">Entity<span class="arrow">↕</span></button>
       <button class="th col-cat" data-key="category">Category<span class="arrow">↕</span></button>
-      <button class="th col-build" data-key="buildStatus">Build Status<span class="arrow">↕</span></button>
+      <button class="th col-summary" data-key="summary">Summary Description<span class="arrow">↕</span></button>
       <button class="th col-opp" data-key="opportunity">Opportunity<span class="arrow">↕</span></button>
       <button class="th col-comp" data-key="competitors">Competitors<span class="arrow">↕</span></button>
       <button class="th col-updated" data-key="lastUpdated">Updated<span class="arrow">↕</span></button>
@@ -603,6 +603,17 @@ let saveError = null;      // { key, message } -- key matches editingField/updat
 
 function getField(item, path) {
   return path.split(".").reduce((o, k) => (o ? o[k] : undefined), item);
+}
+// Column-preview truncation for the Summary Description column -- the full
+// text still shows untruncated in the row-expand ("Product/Service
+// Description") and on the full detail page. Cuts at the last whole word
+// before the limit rather than mid-word.
+function truncateForColumn(str, limit = 130) {
+  if (!str) return "";
+  if (str.length <= limit) return str;
+  const cut = str.slice(0, limit);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut) + "…";
 }
 function setField(item, path, value) {
   const parts = path.split(".");
@@ -884,7 +895,7 @@ function render() {
       <div class="col-name init-name">${item.name}</div>
       <div class="col-entity"><span class="entity-badge ${ent.cls}" title="${ent.full}">${ent.label}</span></div>
       <div class="col-cat cell-sub">${item.category}</div>
-      <div class="col-build cell-sub">${item.buildStatus}</div>
+      <div class="col-summary cell-sub" title="${(item.summary || "").replace(/"/g, "&quot;")}">${truncateForColumn(item.summary)}</div>
       <div class="col-opp"><span class="status-pill" style="background:${status.color}">${status.label}</span></div>
       <div class="col-comp cell-sub">${item.competitors}</div>
       <div class="col-updated cell-dim">${item.lastUpdated}</div>
@@ -901,7 +912,7 @@ function render() {
       <p class="entity-source">${entitySourceLine(item)}</p>
       <hr class="entity-divider">
       <div class="record-grid">
-        ${renderEditableField(item, "summary", "Summary Description", true)}
+        ${renderEditableField(item, "summary", "Product/Service Description", true)}
         ${renderAttrField(item, "buildStatus", "Current Development Status", item.buildStatus)}
         ${renderEditableField(item, "body.market", "Market Position", true)}
         ${renderEditableField(item, "body.differentiation", "Differentiation", true)}
