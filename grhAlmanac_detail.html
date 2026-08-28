@@ -168,15 +168,6 @@
 
   .field-block + .field-block { margin-top: 16px; }
 
-  .narrative-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 22px 32px;
-    margin-top: 22px;
-  }
-  .narrative-grid .field-block + .field-block { margin-top: 0; }
-  .narrative-grid .field-text { max-width: none; }
-
   .empty-state {
     font-size: 13.5px;
     color: var(--text-dim);
@@ -507,8 +498,6 @@ let saveError = null;         // { key, message } -- key matches editingField/at
 // admin_update_static_field alongside this wiring.
 const STATIC_FIELD_MAP = {
   "summary": "summary",
-  "body.market": "market",
-  "body.nextDecision": "next_decision",
   "body.differentiation": "differentiation",
   "body.valueProposition": "value_proposition",
   "body.mvpDescription": "mvp_description",
@@ -533,7 +522,6 @@ function disableAdminMode() {
   addingMethodFor = null;
   updatingCompetitors = false;
   updatingBuildStatus = false;
-  updatingFrictionPoints = false;
   document.body.classList.remove("admin-mode");
   document.getElementById("adminToggleBtn").classList.remove("on");
   document.getElementById("adminToggleBtn").textContent = "Admin Mode: Off";
@@ -693,43 +681,6 @@ function renderValuationTable(valuation) {
 // adminInsertAttribute function and refetches on success.
 let updatingCompetitors = false;
 let updatingBuildStatus = false;
-let updatingFrictionPoints = false;
-// Attribute-tracked field, matching renderBuildStatusField's pattern --
-// backed by the append-only `friction_points` table.
-function renderFrictionPointsField(currentValue) {
-  const value = currentValue || "";
-  if (updatingFrictionPoints) {
-    const errHtml = (saveError && saveError.key === "frictionPoints")
-      ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
-    return `
-      <div class="field-block">
-        <div class="field-label attr-field">Friction Points
-          <span class="attr-update-trigger" data-open-friction-points="1">Update →</span>
-        </div>
-        <div class="field-text">${value}</div>
-        <div class="admin-update-form">
-          <div class="field-label">Admin Update – Friction Points</div>
-          <div class="admin-update-note">Appends a new entry; it never overwrites the value above.</div>
-          <textarea class="edit-textarea" id="frictionPointsNewValue" rows="2">${value}</textarea>
-          <input class="edit-input" id="frictionPointsNote" placeholder="Optional note">
-          ${errHtml}
-          <div class="edit-actions">
-            <button class="edit-save-btn" data-save-friction-points="1">Save Update</button>
-            <button class="edit-cancel-btn" data-cancel-friction-points="1">Cancel</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-  return `
-    <div class="field-block">
-      <div class="field-label attr-field">Friction Points
-        <span class="attr-update-trigger" data-open-friction-points="1">Update →</span>
-      </div>
-      <div class="field-text">${value}</div>
-    </div>
-  `;
-}
 // Attribute-tracked field, matching renderCompetitorsField's pattern below --
 // Current Development Status is backed by the append-only `build_status`
 // table (still named build_status on the wire/DB side; "Current Development
@@ -777,7 +728,7 @@ function renderCompetitorsField(currentValue) {
       ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
     return `
       <div class="field-block">
-        <div class="field-label attr-field">Competitors
+        <div class="field-label attr-field">Strongest Direct Competitors
           <span class="attr-update-trigger" data-open-competitors="1">Update →</span>
         </div>
         <div class="field-text">${value}</div>
@@ -797,7 +748,7 @@ function renderCompetitorsField(currentValue) {
   }
   return `
     <div class="field-block">
-      <div class="field-label attr-field">Competitors
+      <div class="field-label attr-field">Strongest Direct Competitors
         <span class="attr-update-trigger" data-open-competitors="1">Update →</span>
       </div>
       <div class="field-text">${value}</div>
@@ -822,22 +773,14 @@ function render() {
       <span class="status-pill" style="background:${status.color}">${status.label}</span>
     </div>
     <p class="entity-source">${entitySourceLine(item)}</p>
+    ${adminMode ? renderEditableField("summary", "Product/Service Description", item.summary)
+                : `<p class="summary-text">${item.summary}</p>`}
 
-    <div class="narrative-grid">
-      ${adminMode ? renderEditableField("summary", "Product/Service Description", item.summary)
-                  : `<div class="field-block"><div class="field-label">Product/Service Description</div><div class="field-text">${field(item.summary)}</div></div>`}
+    <div class="panel">
+      <div class="panel-title">Current Development Status</div>
+      <p class="panel-note">Where this initiative actually stands, build-wise -- what exists versus what's still concept or spec.</p>
       ${adminMode ? renderBuildStatusField(item.buildStatus)
                   : `<div class="field-block"><div class="field-label">Current Development Status</div><div class="field-text">${field(item.buildStatus)}</div></div>`}
-      ${adminMode ? renderEditableField("body.market", "Market Position", item.body.market)
-                  : `<div class="field-block"><div class="field-label">Market Position</div><div class="field-text">${field(item.body.market)}</div></div>`}
-      ${adminMode ? renderCompetitorsField(item.competitors)
-                  : `<div class="field-block"><div class="field-label">Competitors</div><div class="field-text">${field(item.competitors)}</div></div>`}
-      ${adminMode ? renderEditableField("body.differentiation", "Differentiation", item.body.differentiation)
-                  : `<div class="field-block"><div class="field-label">Differentiation</div><div class="field-text">${field(item.body.differentiation)}</div></div>`}
-      ${adminMode ? renderFrictionPointsField(item.body.frictionPoints)
-                  : `<div class="field-block"><div class="field-label">Friction Points</div><div class="field-text">${field(item.body.frictionPoints)}</div></div>`}
-      ${adminMode ? renderEditableField("body.nextDecision", "Next Decision Point", item.body.nextDecision)
-                  : `<div class="field-block"><div class="field-label">Next Decision Point</div><div class="field-text">${field(item.body.nextDecision)}</div></div>`}
     </div>
 
     <div class="panel">
@@ -858,9 +801,13 @@ function render() {
 
     <div class="panel">
       <div class="panel-title">Competitor Positioning</div>
-      <p class="panel-note">Landscape for this initiative. Competitors and differentiation now live above, in the Product/Service Description grid.</p>
+      <p class="panel-note">Landscape, strongest direct competitors, and differentiation for this initiative.</p>
       ${adminMode ? renderEditableField("body.competitiveLandscape", "Competitive Landscape", item.body.competitiveLandscape)
                   : `<div class="field-block"><div class="field-label">Competitive Landscape</div><div class="field-text">${field(item.body.competitiveLandscape)}</div></div>`}
+      ${adminMode ? renderCompetitorsField(item.competitors)
+                  : `<div class="field-block"><div class="field-label">Strongest Direct Competitors</div><div class="field-text">${field(item.competitors)}</div></div>`}
+      ${adminMode ? renderEditableField("body.differentiation", "Differentiation", item.body.differentiation)
+                  : `<div class="field-block"><div class="field-label">Differentiation</div><div class="field-text">${field(item.body.differentiation)}</div></div>`}
     </div>
 
     <div class="panel">
@@ -1006,46 +953,6 @@ function bindAdminHandlers() {
         saveError = null;
       } catch (err) {
         saveError = { key: "buildStatus", message: err.message || "Save failed." };
-      }
-      render();
-    });
-  });
-
-  contentEl.querySelectorAll("[data-open-friction-points]").forEach(el => {
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!adminMode) return;
-      updatingFrictionPoints = true;
-      editingField = null;
-      addingMethodFor = null;
-      saveError = null;
-      render();
-    });
-  });
-  contentEl.querySelectorAll("[data-cancel-friction-points]").forEach(el => {
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (!adminMode) return;
-      updatingFrictionPoints = false;
-      saveError = null;
-      render();
-    });
-  });
-  contentEl.querySelectorAll("[data-save-friction-points]").forEach(el => {
-    el.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      if (!adminMode) return;
-      const newVal = document.getElementById("frictionPointsNewValue").value;
-      const note = document.getElementById("frictionPointsNote").value;
-      el.disabled = true;
-      el.textContent = "Saving…";
-      try {
-        await adminInsertAttribute(adminPassword, item.id, "friction_points", newVal, note || null);
-        await refetchItem();
-        updatingFrictionPoints = false;
-        saveError = null;
-      } catch (err) {
-        saveError = { key: "frictionPoints", message: err.message || "Save failed." };
       }
       render();
     });

@@ -915,11 +915,11 @@ function render() {
         ${renderEditableField(item, "summary", "Product/Service Description", true)}
         ${renderAttrField(item, "buildStatus", "Current Development Status", item.buildStatus)}
         ${renderEditableField(item, "body.market", "Market Position", true)}
+        ${renderAttrField(item, "competitors", "Competitors", item.competitors)}
         ${renderEditableField(item, "body.differentiation", "Differentiation", true)}
         ${renderAttrField(item, "frictionPoints", "Friction Points", item.body.frictionPoints)}
         ${renderEditableField(item, "body.nextDecision", "Next Decision Point", true)}
         ${renderUrlField(item)}
-        ${adminMode ? renderAttrField(item, "competitors", "Competitors", item.competitors) : ""}
         ${adminMode ? renderOpportunityField(item) : ""}
         ${adminMode ? renderEditableField(item, "manualRank", "Manual Row Position (Admin Only — blank resumes automatic sort)", false) : ""}
       </div>
