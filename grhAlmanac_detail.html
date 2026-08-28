@@ -679,6 +679,47 @@ function renderValuationTable(valuation) {
 // append-only `competitors` table, not a plain overwrite. Calls the real
 // adminInsertAttribute function and refetches on success.
 let updatingCompetitors = false;
+let updatingBuildStatus = false;
+// Attribute-tracked field, matching renderCompetitorsField's pattern below --
+// Current Development Status is backed by the append-only `build_status`
+// table (still named build_status on the wire/DB side; "Current Development
+// Status" is the display label only). Calls the real adminInsertAttribute
+// function and refetches on success.
+function renderBuildStatusField(currentValue) {
+  const value = currentValue || "";
+  if (updatingBuildStatus) {
+    const errHtml = (saveError && saveError.key === "buildStatus")
+      ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
+    return `
+      <div class="field-block">
+        <div class="field-label attr-field">Current Development Status
+          <span class="attr-update-trigger" data-open-build-status="1">Update →</span>
+        </div>
+        <div class="field-text">${value}</div>
+        <div class="admin-update-form">
+          <div class="field-label">Admin Update – Current Development Status</div>
+          <div class="admin-update-note">Appends a new entry; it never overwrites the value above.</div>
+          <textarea class="edit-textarea" id="buildStatusNewValue" rows="2">${value}</textarea>
+          <input class="edit-input" id="buildStatusNote" placeholder="Optional note">
+          ${errHtml}
+          <div class="edit-actions">
+            <button class="edit-save-btn" data-save-build-status="1">Save Update</button>
+            <button class="edit-cancel-btn" data-cancel-build-status="1">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="field-block">
+      <div class="field-label attr-field">Current Development Status
+        <span class="attr-update-trigger" data-open-build-status="1">Update →</span>
+      </div>
+      <div class="field-text">${value}</div>
+    </div>
+  `;
+}
+
 function renderCompetitorsField(currentValue) {
   const value = currentValue || "";
   if (updatingCompetitors) {
@@ -731,8 +772,15 @@ function render() {
       <span class="status-pill" style="background:${status.color}">${status.label}</span>
     </div>
     <p class="entity-source">${entitySourceLine(item)}</p>
-    ${adminMode ? renderEditableField("summary", "Summary Description", item.summary)
+    ${adminMode ? renderEditableField("summary", "Product/Service Description", item.summary)
                 : `<p class="summary-text">${item.summary}</p>`}
+
+    <div class="panel">
+      <div class="panel-title">Current Development Status</div>
+      <p class="panel-note">Where this initiative actually stands, build-wise -- what exists versus what's still concept or spec.</p>
+      ${adminMode ? renderBuildStatusField(item.buildStatus)
+                  : `<div class="field-block"><div class="field-label">Current Development Status</div><div class="field-text">${field(item.buildStatus)}</div></div>`}
+    </div>
 
     <div class="panel">
       <div class="panel-title">Market Assessment</div>
@@ -864,6 +912,46 @@ function bindAdminHandlers() {
         saveError = null;
       } catch (err) {
         saveError = { key: errKey, message: err.message || "Save failed." };
+      }
+      render();
+    });
+  });
+
+  contentEl.querySelectorAll("[data-open-build-status]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      updatingBuildStatus = true;
+      editingField = null;
+      addingMethodFor = null;
+      saveError = null;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-cancel-build-status]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      updatingBuildStatus = false;
+      saveError = null;
+      render();
+    });
+  });
+  contentEl.querySelectorAll("[data-save-build-status]").forEach(el => {
+    el.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!adminMode) return;
+      const newVal = document.getElementById("buildStatusNewValue").value;
+      const note = document.getElementById("buildStatusNote").value;
+      el.disabled = true;
+      el.textContent = "Saving…";
+      try {
+        await adminInsertAttribute(adminPassword, item.id, "build_status", newVal, note || null);
+        await refetchItem();
+        updatingBuildStatus = false;
+        saveError = null;
+      } catch (err) {
+        saveError = { key: "buildStatus", message: err.message || "Save failed." };
       }
       render();
     });
