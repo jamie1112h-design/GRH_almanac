@@ -704,7 +704,7 @@ document.getElementById("pwModalInput").addEventListener("keydown", (e) => {
 // Save/Cancel when this exact field is the one currently being edited.
 function renderEditableField(item, path, label, multiline) {
   const isEditing = editingField && editingField.itemId === item.id && editingField.path === path;
-  const value = getField(item, path) || "";
+  const value = String(getField(item, path) ?? "");
   if (isEditing) {
     const tag = multiline ? "textarea" : "input";
     const errKey = `${item.id}|${path}`;
