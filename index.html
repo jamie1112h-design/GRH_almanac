@@ -897,7 +897,7 @@ function render() {
       <div class="col-cat cell-sub">${item.category}</div>
       <div class="col-summary cell-sub" title="${(item.summary || "").replace(/"/g, "&quot;")}">${truncateForColumn(item.summary)}</div>
       <div class="col-opp"><span class="status-pill" style="background:${status.color}">${status.label}</span></div>
-      <div class="col-comp cell-sub">${item.competitors}</div>
+      <div class="col-comp cell-sub" title="${(item.competitors || "").replace(/"/g, "&quot;")}">${truncateForColumn(item.competitors)}</div>
       <div class="col-updated cell-dim">${item.lastUpdated}</div>
     `;
     rowEl.addEventListener("click", () => {
