@@ -632,6 +632,7 @@ const STATIC_FIELD_MAP = {
   "body.differentiation": "differentiation",
   "body.nextDecision": "next_decision",
   "manualRank": "manual_rank",
+  "url": "url",
 };
 const ATTR_TABLE_MAP = {
   "buildStatus": "build_status",
@@ -809,17 +810,38 @@ function renderOpportunityField(item) {
   `;
 }
 
-// Website URL -- prototype pass, graphic design only (Decision pending):
-// a real link when set, the same empty-state treatment used elsewhere
-// when it isn't. Not yet admin-editable in this pass.
+// Website URL -- admin-editable in place, same click-to-edit pattern as
+// the other static fields. When not editing: a real clickable link when
+// set (navigates normally for a non-admin visitor), or the same
+// empty-state treatment used elsewhere when it isn't. Admin-mode click
+// opens the edit box instead of navigating -- handled by the shared
+// [data-edit-field] listener's preventDefault, not a separate handler.
 function renderUrlField(item) {
+  const isEditing = editingField && editingField.itemId === item.id && editingField.path === "url";
   const hasUrl = item.url && item.url.trim();
+  if (isEditing) {
+    const errKey = `${item.id}|url`;
+    const errHtml = (saveError && saveError.key === errKey)
+      ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
+    return `
+      <div>
+        <div class="field-label">Website URL</div>
+        <input class="edit-input" id="editbox-${item.id}-url" value="${(item.url || "").replace(/"/g, "&quot;")}">
+        ${errHtml}
+        <div class="edit-actions">
+          <button class="edit-save-btn" data-save-field="${item.id}|url">Save</button>
+          <button class="edit-cancel-btn" data-cancel-field="1">Cancel</button>
+        </div>
+      </div>
+    `;
+  }
+  const displayHtml = hasUrl
+    ? `<a class="field-text url-link editable-field" href="${item.url}" target="_blank" rel="noopener" data-edit-field="${item.id}|url">${item.url}</a>`
+    : `<div class="field-text empty-state editable-field" data-edit-field="${item.id}|url">Not yet set.</div>`;
   return `
     <div>
       <div class="field-label">Website URL</div>
-      ${hasUrl
-        ? `<a class="field-text url-link" href="${item.url}" target="_blank" rel="noopener">${item.url}</a>`
-        : `<div class="empty-state">Not yet set.</div>`}
+      ${displayHtml}
     </div>
   `;
 }
@@ -923,7 +945,7 @@ function render() {
         ${renderEditableField(item, "body.nextDecision", "Next Decision Point", true)}
         ${renderUrlField(item)}
         ${adminMode ? renderOpportunityField(item) : ""}
-        ${adminMode ? renderEditableField(item, "manualRank", "Manual Row Position (Admin Only — blank resumes automatic sort)", false) : ""}
+        ${adminMode ? renderEditableField(item, "manualRank", "Manual Row Position (Admin Only – blank resumes automatic sort)", false) : ""}
       </div>
       <div class="record-actions">
         <a class="full-record-btn" href="grhAlmanac_detail.html?id=${item.id}">View the Full Initiative Record <span class="arrow-right">→</span></a>
@@ -939,10 +961,15 @@ function render() {
     // the four static fields were editable regardless of admin state.
 
     // Static-field in-place edit: click text -> input, Save/Cancel.
+    // Website URL renders as a real <a> when set (Decision pending, now
+    // resolved) -- preventDefault only fires in admin mode, so a normal
+    // visitor's click still navigates to the site rather than being
+    // silently swallowed.
     recordEl.querySelectorAll("[data-edit-field]").forEach(el => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         if (!adminMode) return;
+        e.preventDefault();
         const [itemId, path] = el.dataset.editField.split("|");
         editingField = { itemId, path };
         updatingAttr = null;
