@@ -21,6 +21,7 @@ const ENTITY_META = {
   grhci: { label: "GRHCi", full: "Grand River Hills Cinematics",         cls: "entity-grhci" },
   grhns: { label: "GRHNS", full: "Grand River Hills Nutrient Superfoods", cls: "entity-grhns" },
   grhbc: { label: "GRHBC", full: "Grand River Hills BioChem",            cls: "entity-grhbc" },
+  oppan: { label: "OppAn", full: "Opp Analytics (OppAna)",               cls: "entity-oppan" },
 };
 
 // Category descriptors used in the row-expand entity-source line. Falls back
@@ -34,6 +35,7 @@ const CATEGORY_DESCRIPTORS = {
   "Præying Zone Series": "The Præying Zone Franchise and Mythology",
   "Publishing": "Standalone Book Titles",
   "Proprietary Framework": "Internal IP Frameworks and Methodologies",
+  "OppAnalytics": "Opp Analytics (OppAna) Brand Platforms and Services",
 };
 
 function entitySourceLine(item) {
@@ -41,4 +43,3 @@ function entitySourceLine(item) {
   const desc = CATEGORY_DESCRIPTORS[item.category] || item.category;
   return `${ent.full} – ${desc} <span class="entity-badge ${ent.cls}" title="${ent.full}">${ent.label}</span>`;
 }
-
