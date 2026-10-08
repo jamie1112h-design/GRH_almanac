@@ -99,6 +99,28 @@
     padding-bottom: 14px;
   }
 
+  h1.no-rule { border-bottom: none; padding-bottom: 6px; }
+
+  .key-message-row {
+    border-bottom: 2px solid var(--gold);
+    padding: 4px 0 14px;
+  }
+  .key-label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    margin-right: 6px;
+  }
+  .key-text {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--text-primary);
+    line-height: 1.4;
+  }
+  .key-text.empty { font-size: 15px; color: var(--text-dim); font-style: italic; }
+  .key-message-row .edit-textarea { max-width: 620px; margin-top: 6px; }
+
   .badges { margin-top: 10px; }
 
   .entity-source {
@@ -504,7 +526,38 @@ const STATIC_FIELD_MAP = {
   "body.productEnhancements": "product_enhancements",
   "body.marketingSummary": "marketing_summary",
   "body.competitiveLandscape": "competitive_landscape",
+  "keyMessage": "key_message",
 };
+
+// Entities whose rows carry the Value Proposition Key Message line:
+// GRHT, GRHNS, GRHCy and OppAn (item.entity is the lowercased entity_id).
+const KEY_MESSAGE_ENTITIES = ["grht", "grhns", "grhcy", "oppan"];
+
+function renderKeyMessage(item) {
+  const label = "Value Proposition Key Message –";
+  const value = item.keyMessage || "";
+  if (!KEY_MESSAGE_ENTITIES.includes(item.entity)) return "";
+  if (!adminMode) {
+    if (!value) return "";   // blank: hidden from visitors, fillable in admin mode
+    return `<div class="key-message-row"><span class="key-label">${label}</span><span class="key-text">${value}</span></div>`;
+  }
+  if (editingField === "keyMessage") {
+    const errHtml = (saveError && saveError.key === "keyMessage")
+      ? `<div class="pw-modal-error" style="display:block;">${saveError.message}</div>` : "";
+    return `
+      <div class="key-message-row">
+        <span class="key-label">${label}</span>
+        <textarea class="edit-textarea" id="editbox-keyMessage" rows="2">${value}</textarea>
+        ${errHtml}
+        <div class="edit-actions">
+          <button class="edit-save-btn" data-save-field="keyMessage">Save</button>
+          <button class="edit-cancel-btn" data-cancel-field="1">Cancel</button>
+        </div>
+      </div>
+    `;
+  }
+  return `<div class="key-message-row"><span class="key-label">${label}</span><span class="key-text editable-field${value ? "" : " empty"}" data-edit-field="keyMessage">${value || "Click to add the key message"}</span></div>`;
+}
 
 
 function enableAdminMode() {
@@ -766,8 +819,10 @@ function render() {
   const na = "Not yet assessed – no analysis has been logged for this initiative yet.";
   const field = (val) => val || na;
 
+  const keyMessageHtml = renderKeyMessage(item);
   contentEl.innerHTML = `
-    <h1>${item.name} – Grand River Hills Inc. Almanac</h1>
+    <h1${keyMessageHtml ? ' class="no-rule"' : ""}>${item.name} – Grand River Hills Inc. Almanac</h1>
+    ${keyMessageHtml}
     <div class="badges">
       <span class="entity-badge ${ent.cls}" title="${ent.full}">${ent.label}</span>
       <span class="status-pill" style="background:${status.color}">${status.label}</span>

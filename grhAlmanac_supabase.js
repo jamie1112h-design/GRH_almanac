@@ -173,6 +173,7 @@ async function loadInitiatives() {
     buildStatus: r.build_status,
     competitors: r.competitors,
     summary: r.summary,
+    keyMessage: r.key_message, // Value Proposition Key Message (GRHT, GRHNS, GRHCy and OppAn rows)
     version: r.version, // needed client-side for the optimistic-concurrency write check
     // Decision 19: "Updated On" is backend-driven, not a hardcoded string --
     // this is the real updated_at timestamp, maintained automatically by
